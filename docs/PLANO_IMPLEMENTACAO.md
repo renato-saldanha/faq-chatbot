@@ -7,7 +7,8 @@ Referência: `PRD.md`. Cada parte é entregável e testável isoladamente antes 
 - `docker-compose.yml`: serviço `postgres`, `backend` (FastAPI + uvicorn), `frontend` (Next.js).
 - `backend/config.py` via pydantic-settings: `DATABASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `SIMILARITY_BACKEND` (`fuzzy` | `embedding`), `SIMILARITY_THRESHOLD`.
 - `.env.example` com todas as variáveis, sem valores reais.
-- Critério de saída: `docker compose up` sobe os 3 serviços, backend responde em `/health`, frontend carrega página em branco.
+- Portabilidade Windows/Mac/Ubuntu: imagens base multi-arquitetura (`python:3.11-slim`, `node:20-alpine`, `postgres:16`), sem paths absolutos do host nos volumes (`./backend:/app`), `.gitattributes` forçando `eol=lf` em `*.sh`/`Dockerfile`/scripts de entrypoint para não quebrar shebang por CRLF vindo do Windows.
+- Critério de saída: `docker compose up` sobe os 3 serviços, backend responde em `/health`, frontend carrega página em branco — validado localmente (Windows) e a validação cruzada em outro SO fica registrada no README como instrução, já que não há máquina Mac/Ubuntu disponível para testar diretamente neste ambiente.
 
 ## Parte 1 — Modelo de dados e base de conhecimento (backend)
 - SQLAlchemy models: `Categoria`, `FaqItem`, `Interacao` (schema em PRD §6).

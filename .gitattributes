@@ -1,0 +1,9 @@
+# Garante LF nos arquivos que rodam dentro de containers Linux,
+# independente do SO onde o repositorio foi clonado/editado.
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.dockerfile text eol=lf
+entrypoint* text eol=lf
+
+# Demais arquivos: normalizacao padrao do Git por plataforma.
+* text=auto
