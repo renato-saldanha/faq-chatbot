@@ -29,7 +29,7 @@ Resultado esperado: automatizar o atendimento de dúvidas recorrentes + fornecer
 |---|---|---|
 | D1 | Quantidade total de consultas realizadas | `COUNT(*)` de interações no período filtrado |
 | D2 | Perguntas mais frequentes | Top-N por texto normalizado (ou por FAQ vinculada) |
-| D3 | Perguntas sem resposta cadastrada | Lista/contagem de interações com `sem_resposta=true` — mesma fonte de C5, vista do lado dashboard. Agrupadas por similaridade (clustering sobre os embeddings já calculados) para expor temas recorrentes ainda não cobertos pela base, em vez de uma lista crua |
+| D3 | Perguntas sem resposta cadastrada | Lista/contagem de interações com `sem_resposta=true` — mesma fonte de C5, vista do lado dashboard. Quando `SIMILARITY_BACKEND` inclui embedding (protótipo B ou C), agrupadas por similaridade (clustering) para expor temas recorrentes ainda não cobertos pela base; com `SIMILARITY_BACKEND=fuzzy`, o `ClusteringService` cai para agrupamento por trigram sobre o texto normalizado — mesma interface, sem perder a funcionalidade (ver §7) |
 | D4 | Distribuição de consultas por categoria | `GROUP BY categoria` — exige que toda pergunta da base tenha categoria (C1) |
 | D5 | Evolução das consultas ao longo do tempo | Série diária de contagem de interações |
 | D6 | Indicadores e gráficos para análise | Cards de KPI + gráficos (linha para D5, barra/pizza para D4, tabela para D2/D3) |
@@ -80,26 +80,27 @@ interacao
   score_similaridade, sem_resposta (bool), embedding (vector, nullable), criado_em
 ```
 
-`interacao.faq_item_id` nullable + `sem_resposta` cobre C5/D3 na mesma tabela — não precisa de entidade separada para "perguntas sem resposta". `interacao.embedding` guarda o vetor da pergunta do usuário quando o backend semântico está ativo, reaproveitado depois para o clustering de perguntas sem resposta (D3) sem recalcular.
+`interacao.faq_item_id` nullable + `sem_resposta` cobre C5/D3 na mesma tabela — não precisa de entidade separada para "perguntas sem resposta". `interacao.embedding` guarda o vetor da pergunta do usuário quando o backend semântico está ativo, reaproveitado depois para o clustering de perguntas sem resposta (D3) sem recalcular. `ClusteringService` nunca acessa esse campo diretamente — depende de `SimilarityService.vector_for(texto)` (ver §7), que cada estratégia implementa com sua própria noção de "vetor" (embedding real ou representação em trigramas), garantindo que D3 funcione com qualquer `SIMILARITY_BACKEND`.
 
 ## 7. Arquitetura
 
 ```
 backend/ (FastAPI)
-├── main.py
+├── main.py                    # monta o app, registra dependency providers
 ├── config.py                  # pydantic-settings, inclui OPENAI_API_KEY/MODEL
 ├── api/
 │   ├── chat.py                 # POST /api/chat/ask
 │   ├── faq.py                  # CRUD da base de conhecimento
-│   └── metrics.py              # GET /api/metrics/summary|categories|top-questions|unanswered|timeseries
+│   └── metrics.py              # GET /api/metrics/summary|top-questions|unanswered|categories|timeseries
 ├── services/
-│   ├── similarity_service.py   # protótipos A/B/C (fuzzy, embedding, híbrido) por trás de uma interface comum
+│   ├── similarity_service.py   # interface SimilarityService + 3 estratégias (fuzzy/embedding/híbrida)
 │   ├── chat_service.py         # orquestra busca + registro de interação
 │   └── clustering_service.py   # agrupa perguntas sem resposta por similaridade (D3)
 ├── repositories/
 │   ├── faq_repository.py
 │   ├── interaction_repository.py
-│   └── metrics_repository.py   # queries agregadas
+│   ├── faq_metrics_repository.py        # D2, D4 — leitura sobre faq_item/interacao por categoria/frequência
+│   └── timeseries_metrics_repository.py # D1, D5 — leitura sobre interacao por período/dia
 └── models/ (SQLAlchemy) + alembic/
 
 frontend/ (Next.js)
@@ -113,6 +114,24 @@ frontend/ (Next.js)
 
 docker-compose.yml   # postgres + backend + frontend
 ```
+
+### 7.1 Injeção de dependência
+
+Nenhum service ou repository instancia suas próprias dependências. `Categoria`/`FaqItem`/`Interacao` repositories recebem a sessão de banco via `Depends(get_db_session)`; `ChatService` e `ClusteringService` recebem `SimilarityService` e os repositórios de que precisam pelo construtor, resolvidos por `Depends(...)` nas rotas do FastAPI (padrão nativo do framework — sem necessidade de container de DI externo). Isso é o que torna os services testáveis isoladamente com repositórios/estratégias fake nos testes da Parte 3.
+
+### 7.2 Dependência declarada — `ClusteringService` → `SimilarityService`
+
+D3 (perguntas sem resposta agrupadas por tema) depende de uma noção de "distância entre perguntas", que só existe dentro de `SimilarityService`. Para não acoplar o clustering a um backend específico, a interface expõe um método adicional:
+
+```
+SimilarityService.vector_for(texto: str) -> Vector
+```
+
+Cada estratégia implementa `vector_for` com sua própria representação — embedding real nos protótipos B/C, vetor esparso de trigramas no protótipo A. `ClusteringService` consome só essa interface, nunca a coluna `interacao.embedding` diretamente, então D3 funciona corretamente qualquer que seja o `SIMILARITY_BACKEND` escolhido ao final da Parte 2.
+
+### 7.3 Métricas divididas por tipo de consulta
+
+O que era um único `MetricsRepository` acumulando 5 responsabilidades de leitura foi dividido em dois repositórios menores por afinidade de consulta: `FaqMetricsRepository` (D2 perguntas mais frequentes, D4 distribuição por categoria — ambos agregam sobre `faq_item`/categoria) e `TimeseriesMetricsRepository` (D1 total, D5 série diária — agregam sobre `interacao` por período). `get_unanswered` (D3) vive em `InteractionRepository`, já que é uma listagem filtrada de `Interacao`, não uma agregação nova.
 
 ## 8. Fora de escopo (explicitamente, para não inflar o projeto)
 

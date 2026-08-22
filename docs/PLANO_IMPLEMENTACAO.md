@@ -19,9 +19,9 @@ Referência: `PRD.md`. Cada parte é entregável e testável isoladamente antes 
 - Critério de saída: CRUD funcional via `curl`/Swagger (`/docs` do FastAPI), seed populado.
 
 ## Parte 2 — Protótipos de busca por similaridade (backend, isolado)
-- Definir interface comum `SimilarityService.find_best_match(pergunta: str) -> MatchResult | None`.
-- **Protótipo A (fuzzy)**: `pg_trgm` (extensão Postgres) ou `rapidfuzz` puro Python.
-- **Protótipo B (embedding)**: chamada à API OpenAI (`text-embedding-3-small`), cache de embeddings dos `FaqItem` (calculados no seed/CRUD, coluna `embedding`), comparação por cosseno.
+- Definir interface comum `SimilarityService` com dois métodos: `find_best_match(pergunta: str) -> MatchResult | None` (usado pelo chat) e `vector_for(texto: str) -> Vector` (usado pelo `ClusteringService` na Parte 5 — cada estratégia decide o que "vetor" significa, então o clustering nunca acopla a um backend específico).
+- **Protótipo A (fuzzy)**: `pg_trgm` (extensão Postgres) ou `rapidfuzz` puro Python. `vector_for` retorna a representação em trigramas do texto normalizado.
+- **Protótipo B (embedding)**: chamada à API OpenAI (`text-embedding-3-small`), cache de embeddings dos `FaqItem` (calculados no seed/CRUD, coluna `embedding`), comparação por cosseno. `vector_for` retorna o embedding real.
 - **Protótipo C (híbrido)**: combina os scores de A e B (`score_final = α·score_embedding + (1-α)·score_trigram`), com `α` calibrado no mesmo script de avaliação.
 - Normalização de texto (lowercase, remoção de acentuação/pontuação) antes de vetorizar, com cache de embedding por hash do texto normalizado.
 - Limiar adaptativo: aceitar o melhor candidato por margem relativa ao segundo colocado, além do `SIMILARITY_THRESHOLD` absoluto.
@@ -30,11 +30,11 @@ Referência: `PRD.md`. Cada parte é entregável e testável isoladamente antes 
 - Critério de saída: script rodado, decisão tomada e documentada, protótipo vencedor plugado como implementação padrão de `SimilarityService` (interface permite trocar via `SIMILARITY_BACKEND` no `.env`, então nenhum código é descartado).
 
 ## Parte 3 — Fluxo do chatbot (backend)
-- `InteracaoRepository`: `create`, queries de agregação usadas na Parte 5.
-- `ChatService.ask(pergunta: str) -> ChatResponse`: chama `SimilarityService`, monta resposta ou fallback, grava `Interacao` (sempre, matched ou não).
+- `InteracaoRepository`: `create` e `get_unanswered` (listagem filtrada por `sem_resposta=true`, usada na Parte 5 para D3).
+- `ChatService.ask(pergunta: str) -> ChatResponse`: recebe `SimilarityService` e `InteracaoRepository` injetados pelo construtor (via `Depends(...)` nas rotas — nenhum service instancia sua própria dependência), chama `find_best_match`, monta resposta ou fallback, grava `Interacao` (sempre, matched ou não).
 - `api/chat.py`: `POST /api/chat/ask` — request `{pergunta}`, response `{resposta, faq_item_id, categoria, sem_resposta, score}`.
 - Tratamento de erros: pergunta vazia (422), falha do provedor de embedding (fallback automático para fuzzy, não derruba o chat), timeout de API externa.
-- Critério de saída: testes automatizados (pytest) cobrindo match, no-match e fallback de erro; endpoint testável via Swagger.
+- Critério de saída: testes automatizados (pytest) cobrindo match, no-match e fallback de erro — usando repositório e `SimilarityService` fake injetados, sem subir banco real; endpoint testável via Swagger.
 
 ## Parte 4 — Interface de chat (frontend)
 - `app/(chat)/page.tsx` + `components/domain/chat-window.tsx`: input, lista de mensagens (usuário/bot), indicador de "sem resposta" visualmente distinto.
@@ -43,15 +43,12 @@ Referência: `PRD.md`. Cada parte é entregável e testável isoladamente antes 
 - Critério de saída: conversa funcional end-to-end no browser, incluindo caso de pergunta sem match.
 
 ## Parte 5 — Métricas agregadas (backend)
-- `MetricsRepository` (Postgres):
-  - `get_summary(date_from, date_to)` → total de consultas, total sem resposta, taxa de sem-resposta.
-  - `get_top_questions(date_from, date_to, limit)` → D2.
-  - `get_unanswered(date_from, date_to, limit)` → D3, lista + contagem.
-  - `get_category_breakdown(date_from, date_to)` → D4.
-  - `get_daily_series(date_from, date_to)` → D5 (contagem diária de interações no período).
-- `ClusteringService.cluster_unanswered(date_from, date_to)` → agrupa as perguntas sem resposta por similaridade (reaproveitando `interacao.embedding`, quando o backend semântico está ativo) para expor temas recorrentes ainda não cobertos pela base — D3 avançado.
+- `TimeseriesMetricsRepository` (Postgres): `get_summary(date_from, date_to)` → total de consultas, total sem resposta, taxa de sem-resposta (D1); `get_daily_series(date_from, date_to)` → D5.
+- `FaqMetricsRepository` (Postgres): `get_top_questions(date_from, date_to, limit)` → D2; `get_category_breakdown(date_from, date_to)` → D4.
+- `InteracaoRepository.get_unanswered(date_from, date_to, limit)` (já existe desde a Parte 3) → D3, lista + contagem.
+- `ClusteringService.cluster_unanswered(date_from, date_to)` → recebe `SimilarityService` e `InteracaoRepository` injetados; chama `SimilarityService.vector_for(...)` sobre as perguntas sem resposta (funciona com qualquer `SIMILARITY_BACKEND` — embedding real ou vetor de trigramas) para agrupar por tema recorrente — D3 avançado.
 - `api/metrics.py`: um endpoint por query acima, todos aceitando `date_from`/`date_to` como query params opcionais (sem RBAC — não é requisito do desafio).
-- Critério de saída: endpoints retornam dados corretos contra o seed da Parte 1 + interações geradas na Parte 3/4.
+- Critério de saída: endpoints retornam dados corretos contra o seed da Parte 1 + interações geradas na Parte 3/4; `cluster_unanswered` testado com os três backends de similaridade (fuzzy, embedding, híbrido) para confirmar que D3 não depende de um específico.
 
 ## Parte 6 — Dashboard (frontend)
 - `app/(dashboard)/metricas/page.tsx`: cards de KPI (D1, D3), gráfico de série temporal (D5, `timeseries-chart.tsx` em Recharts, linha), gráfico de categoria (D4, `category-breakdown-chart.tsx` em Recharts, barra/pizza), tabela de perguntas mais frequentes (D2, componente `SimpleTable` reutilizável), lista de perguntas sem resposta agrupada por tema (D3, clusters do `ClusteringService`).
