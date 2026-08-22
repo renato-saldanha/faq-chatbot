@@ -71,14 +71,11 @@ jobs:
     name: frontend (lint + typecheck + test + build)
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
       - name: Detect frontend/
         id: detect
-        run: echo "exists=$([ -f package.json ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+        run: echo "exists=$([ -f frontend/package.json ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
       - uses: pnpm/action-setup@v4
         if: steps.detect.outputs.exists == 'true'
         with:
@@ -91,18 +88,23 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
       - name: pnpm install
         if: steps.detect.outputs.exists == 'true'
+        working-directory: frontend
         run: pnpm install --frozen-lockfile
       - name: lint
         if: steps.detect.outputs.exists == 'true'
+        working-directory: frontend
         run: pnpm lint
       - name: typecheck
         if: steps.detect.outputs.exists == 'true'
+        working-directory: frontend
         run: pnpm typecheck
       - name: test
         if: steps.detect.outputs.exists == 'true'
+        working-directory: frontend
         run: pnpm test
       - name: build
         if: steps.detect.outputs.exists == 'true'
+        working-directory: frontend
         run: pnpm build
 
   docker-build:
