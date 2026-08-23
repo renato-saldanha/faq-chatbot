@@ -38,8 +38,8 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
-            Revise o diff desta PR (base: origin/${{ github.event.pull_request.base.ref }}) seguindo
-            exatamente as instruções abaixo (definição do agente pr-reviewer deste projeto):
+            Revise você mesmo, diretamente nesta sessão, o diff desta PR (base: origin/${{ github.event.pull_request.base.ref }}).
+            NÃO delegue esta tarefa a nenhum subagente via Task/Agent — execute a análise inteira você mesmo, agora, seguindo as instruções abaixo.
 
             ${{ steps.agent_prompt.outputs.AGENT_INSTRUCTIONS }}
           claude_args: --model claude-sonnet-5

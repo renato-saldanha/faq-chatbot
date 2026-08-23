@@ -179,3 +179,5 @@ Fora de escopo desta decisão: múltiplos admins, recuperação de conta, "lembr
 <!-- validacao final: gate com execution_file + log persistido -->
 
 <!-- validacao: allowedTools corrigido -->
+
+<!-- teste final: causa raiz resolvida (limite de uso), sonnet 5 -->
