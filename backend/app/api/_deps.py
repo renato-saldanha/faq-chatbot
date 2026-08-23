@@ -1,6 +1,9 @@
-from fastapi import Cookie, HTTPException
+from fastapi import Cookie, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.jwt import decode_session_token
+from app.db import get_db_session
+from app.repositories.faq_repository import FaqRepository
 
 
 def require_admin_session(session: str | None = Cookie(default=None)) -> str:
@@ -14,3 +17,7 @@ def require_admin_session(session: str | None = Cookie(default=None)) -> str:
     if email is None:
         raise HTTPException(status_code=401, detail="Sessão inválida ou expirada")
     return email
+
+
+def get_faq_repository(session: AsyncSession = Depends(get_db_session)) -> FaqRepository:
+    return FaqRepository(session)

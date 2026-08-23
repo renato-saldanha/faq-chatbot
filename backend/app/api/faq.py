@@ -1,9 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api._deps import require_admin_session
-from app.db import get_db_session
+from app.api._deps import get_faq_repository, require_admin_session
 from app.repositories.faq_repository import FaqRepository
 
 router = APIRouter(prefix="/api/faq", tags=["faq"], dependencies=[Depends(require_admin_session)])
@@ -34,10 +32,6 @@ class FaqItemIn(BaseModel):
 class CategoriaIn(BaseModel):
     nome: str
     slug: str
-
-
-def get_faq_repository(session: AsyncSession = Depends(get_db_session)) -> FaqRepository:
-    return FaqRepository(session)
 
 
 def _to_out(item) -> FaqItemOut:

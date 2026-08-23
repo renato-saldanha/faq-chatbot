@@ -18,9 +18,9 @@ class TestChatServiceAsk:
             score=0.95,
         )
         interacao_repository = AsyncMock()
-        session = AsyncMock()
+        faq_repository = AsyncMock()
 
-        service = ChatService(similarity_service, interacao_repository, session)
+        service = ChatService(similarity_service, interacao_repository, faq_repository)
         response = await service.ask("Como cadastro uma conta?")
 
         assert response.sem_resposta is False
@@ -38,9 +38,9 @@ class TestChatServiceAsk:
         similarity_service = AsyncMock()
         similarity_service.find_best_match.return_value = None
         interacao_repository = AsyncMock()
-        session = AsyncMock()
+        faq_repository = AsyncMock()
 
-        service = ChatService(similarity_service, interacao_repository, session)
+        service = ChatService(similarity_service, interacao_repository, faq_repository)
         response = await service.ask("pergunta sem relação nenhuma com a base")
 
         assert response.sem_resposta is True
