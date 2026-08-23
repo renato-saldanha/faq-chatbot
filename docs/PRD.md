@@ -183,3 +183,5 @@ Fora de escopo desta decisão: múltiplos admins, recuperação de conta, "lembr
 <!-- teste final: causa raiz resolvida (limite de uso), sonnet 5 -->
 
 <!-- teste definitivo: sem delegacao, sonnet 5, limite ajustado -->
+
+<!-- confirmacao final: gate 100% funcional -->
