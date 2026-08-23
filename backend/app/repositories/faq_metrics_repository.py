@@ -45,13 +45,9 @@ class FaqMetricsRepository:
         )
         query = self._apply_date_filter(query, date_from, date_to)
         result = await self._session.execute(query)
-        return [
-            TopQuestion(faq_item_id=row[0], pergunta=row[1], quantidade=row[2]) for row in result.all()
-        ]
+        return [TopQuestion(faq_item_id=row[0], pergunta=row[1], quantidade=row[2]) for row in result.all()]
 
-    async def get_category_breakdown(
-        self, date_from: date | None, date_to: date | None
-    ) -> list[CategoryBreakdown]:
+    async def get_category_breakdown(self, date_from: date | None, date_to: date | None) -> list[CategoryBreakdown]:
         quantidade = func.count(Interacao.id).label("quantidade")
         query = (
             select(Categoria.nome, quantidade)

@@ -4,10 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.repositories.interacao_repository import InteracaoRepository
 from app.services.similarity_service import SimilarityService
 
-FALLBACK_MESSAGE = (
-    "Não encontrei uma resposta para sua pergunta. "
-    "Tente reformular ou entre em contato com o suporte."
-)
+FALLBACK_MESSAGE = "Não encontrei uma resposta para sua pergunta. Tente reformular ou entre em contato com o suporte."
 
 
 class ChatResponse(BaseModel):

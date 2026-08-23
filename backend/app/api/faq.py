@@ -88,8 +88,6 @@ async def list_categorias(repo: FaqRepository = Depends(get_faq_repository)) -> 
 
 
 @router.post("/categorias", response_model=CategoriaOut)
-async def create_categoria(
-    body: CategoriaIn, repo: FaqRepository = Depends(get_faq_repository)
-) -> CategoriaOut:
+async def create_categoria(body: CategoriaIn, repo: FaqRepository = Depends(get_faq_repository)) -> CategoriaOut:
     categoria = await repo.create_categoria(body.nome, body.slug)
     return CategoriaOut(id=categoria.id, nome=categoria.nome, slug=categoria.slug)
