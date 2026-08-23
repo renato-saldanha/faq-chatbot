@@ -137,36 +137,38 @@ export default function FaqAdminPage() {
         </form>
       )}
 
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Pergunta</th>
-            <th>Resposta</th>
-            <th>Categoria</th>
-            <th>Ativo</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(faqItems.data ?? []).map((item) => (
-            <tr key={item.id}>
-              <td>{item.pergunta}</td>
-              <td>{item.resposta.slice(0, 60)}{item.resposta.length > 60 ? "..." : ""}</td>
-              <td>{item.categoria_nome}</td>
-              <td>{item.ativo ? "Sim" : "Não"}</td>
-              <td>
-                <button onClick={() => handleEdit(item)}>Editar</button>
-                <button onClick={() => handleDelete(item.id)}>Excluir</button>
-              </td>
-            </tr>
-          ))}
-          {faqItems.data?.length === 0 && (
+      <div className="table-scroll">
+        <table className="data-table">
+          <thead>
             <tr>
-              <td colSpan={5}>Nenhuma pergunta cadastrada.</td>
+              <th>Pergunta</th>
+              <th>Resposta</th>
+              <th>Categoria</th>
+              <th>Ativo</th>
+              <th>Ações</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {(faqItems.data ?? []).map((item) => (
+              <tr key={item.id}>
+                <td>{item.pergunta}</td>
+                <td>{item.resposta.slice(0, 60)}{item.resposta.length > 60 ? "..." : ""}</td>
+                <td>{item.categoria_nome}</td>
+                <td>{item.ativo ? "Sim" : "Não"}</td>
+                <td>
+                  <button onClick={() => handleEdit(item)}>Editar</button>
+                  <button onClick={() => handleDelete(item.id)}>Excluir</button>
+                </td>
+              </tr>
+            ))}
+            {faqItems.data?.length === 0 && (
+              <tr>
+                <td colSpan={5}>Nenhuma pergunta cadastrada.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

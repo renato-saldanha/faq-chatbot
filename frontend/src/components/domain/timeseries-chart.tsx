@@ -19,7 +19,7 @@ export function TimeseriesChart({ data }: TimeseriesChartProps) {
         <XAxis dataKey="data" />
         <YAxis allowDecimals={false} />
         <Tooltip />
-        <Line type="monotone" dataKey="quantidade" stroke="#2563eb" strokeWidth={2} />
+        <Line type="monotone" dataKey="quantidade" stroke="#0e8f6a" strokeWidth={2} />
       </LineChart>
     </ResponsiveContainer>
   );

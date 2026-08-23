@@ -19,7 +19,7 @@ export function CategoryBreakdownChart({ data }: CategoryBreakdownChartProps) {
         <XAxis dataKey="categoria" />
         <YAxis allowDecimals={false} />
         <Tooltip />
-        <Bar dataKey="quantidade" fill="#2563eb" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="quantidade" fill="#0e8f6a" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );
