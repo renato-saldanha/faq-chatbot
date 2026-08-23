@@ -109,11 +109,11 @@ alembic revision --autogenerate -m "descrição"
 alembic upgrade head
 ```
 
-## Regras de processo (violadas ao menos uma vez nesta sessão — não repetir)
+## Regras de processo
 
-- **Nunca confiar no relatório de um subagent como prova de que o código existe/funciona.** Já aconteceu de um agente reportar "arquivo criado, X testes passando" com saída de `pytest` incluída, e o arquivo simplesmente não existir em disco — ou existir com nome de função diferente do relatado. Sempre confirmar com `ls`/`Read` o arquivo real e rodar o comando de teste/lint você mesmo antes de aceitar como concluído.
-- **Nunca dar `git add <diretório>` genérico esperando pegar só uma mudança.** Ele pega TODO o conteúdo pendente daquele diretório, incluindo trabalho de outra tarefa que só por acaso ainda não tinha sido commitado — resultado é um commit com mensagem sobre X que na verdade também inclui Y não relacionado. Sempre `git status --short` antes de `git add`, e usar `git add <arquivo específico>` quando a intenção é isolar uma mudança.
-- **Frontend/código gerado por agente em paralelo entra como "não verificado" até `npm install`/`build`/`typecheck` rodarem até o fim, sem erro, na sua própria execução.** Escrever o código não é o mesmo que validá-lo — principalmente quando `node_modules` local pode estar corrompido/parcial de uma tentativa anterior (limpar com `rm -rf node_modules` antes de reinstalar se a instalação falhar de forma estranha, tipo `ENOTEMPTY`/`EPERM`).
+- **Nunca confiar no relatório de um subagent como prova de que o código existe/funciona.** Sempre confirmar com `ls`/`Read` o arquivo real e rodar o comando de teste/lint você mesmo antes de aceitar como concluído.
+- **Nunca dar `git add <diretório>` genérico esperando pegar só uma mudança.** Ele pega TODO o conteúdo pendente daquele diretório. Sempre `git status --short` antes de `git add`, e usar `git add <arquivo específico>` quando a intenção é isolar uma mudança.
+- **Código gerado por agente em paralelo entra como "não verificado" até `install`/`build`/`typecheck`/testes rodarem até o fim, sem erro, na sua própria execução.** Escrever o código não é o mesmo que validá-lo.
 
 ## Decisões de escopo (corte sob prazo — ver histórico de commits)
 
