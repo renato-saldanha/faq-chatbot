@@ -6,7 +6,7 @@ Requisitos completos: `docs/PRD.md`. Plano de implementação original: `docs/PL
 
 ## Stack
 
-- **Backend:** Python 3.11+, FastAPI, SQLAlchemy 2.0 (async, `asyncpg`), Alembic, Pydantic v2, `rapidfuzz` + `openai` (similaridade — 3 protótipos, ver decisão abaixo), `pgvector`, `python-jose` (JWT)
+- **Backend:** Python 3.11+, FastAPI, SQLAlchemy 2.0 (async, `asyncpg`), Alembic, Pydantic v2, `rapidfuzz` + `openai` (similaridade — 3 protótipos, ver decisão abaixo), `pgvector`, `python-jose` (JWT), `slowapi` (rate limit)
 - **Banco:** PostgreSQL 16 com extensão `pgvector`
 - **Frontend:** Next.js 14 (App Router), TypeScript, TanStack Query, Zustand, Recharts, Zod
 - **Auth do admin:** OTP por e-mail + JWT em cookie httpOnly — single-admin via `ADMIN_EMAIL`
@@ -114,7 +114,7 @@ backend/
 ├── alembic/                     # Migrations (extensão pgvector + 3 tabelas)
 ├── scripts/seed_faq.py           # Seed idempotente, rodado automaticamente no boot
 ├── scripts/eval_similarity.py    # Gabarito de similaridade — ver "Decisão" acima
-├── tests/                        # 71 testes (services/repositories + rotas HTTP), sem depender de Postgres real
+├── tests/                        # 73 testes (services/repositories + rotas HTTP), sem depender de Postgres real
 └── Dockerfile
 
 frontend/
@@ -156,7 +156,7 @@ Detalhes de arquitetura e convenções de código: `CLAUDE.md` na raiz.
 ```bash
 # Backend
 cd backend
-pytest tests/ -v          # 71 passed
+pytest tests/ -v          # 73 passed
 ruff check . && mypy app/  # ambos limpos
 
 # Frontend
@@ -165,6 +165,19 @@ npx tsc --noEmit
 npm run lint
 npm run test          # 29 passed
 ```
+
+## Segurança
+
+Auditoria dedicada (não apenas revisão incidental) cobrindo autenticação/JWT, SQL injection, XSS, CORS, autorização, segredos e dependências. Resultado: sem vulnerabilidades críticas — JWT (HS256, `exp`, algoritmo explícito), cookie de sessão (`httponly`/`secure`/`samesite=strict`), 100% das queries via SQLAlchemy parametrizado (sem concatenação de string), CORS restrito a `http://localhost:3000`, `.env` real nunca commitado (histórico do git verificado), texto do chat renderizado via JSX (sem `dangerouslySetInnerHTML` com dado de usuário).
+
+Dois problemas reais foram encontrados e corrigidos:
+
+- **`/api/chat/ask` sem rate limit.** É a única rota pública do backend (sem login, por design — é o chat do usuário final) e, com `SIMILARITY_BACKEND=embedding`/`hybrid`, cada pergunta aciona uma chamada de billing real à API da OpenAI. Sem limite, um script simples em loop gera custo ilimitado na conta do dono do projeto. Corrigido com `slowapi` (10 requisições/minuto por IP, `app/rate_limit.py`) — resposta `429` com corpo `{"detail": "..."}` quando excedido. `ChatAskRequest.pergunta` também ganhou `max_length=1000` pelo mesmo motivo (payload gigante = mais tokens = mais custo).
+- **Brute-force do código OTP.** O rate limit existia para *pedir* código novo (3 a cada 15min, evita spam de e-mail), mas não para *tentativas de verificação* — um código de 6 dígitos válido por 5 minutos podia ser forçado por tentativa e erro sem nenhum bloqueio. Corrigido em `OtpStore` (`app/auth/otp_store.py`) com um segundo limite independente: 5 tentativas de verificação por janela de 15min.
+
+Ambos validados com testes automatizados (`test_chat.py::test_ask_acima_do_limite_retorna_429`, `test_auth_service.py::test_otp_store_bloqueia_brute_force_de_verificacao`) e contra o container Docker real.
+
+**Aceito como escopo do desafio** (não corrigido, por não se aplicar ao contexto de projeto local/avaliação): `JWT_SECRET_KEY` com default fraco documentado ("trocar em produção"), sem CSP/security headers adicionais, credenciais do Postgres hardcoded no `docker-compose.yml` (infraestrutura local isolada em container).
 
 ## Fora do escopo desta entrega (decisões conscientes)
 
