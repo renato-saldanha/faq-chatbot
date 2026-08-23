@@ -68,11 +68,27 @@ Todas em `.env.example`:
 
 O PRD original (`docs/PRD.md` §5) previa comparar três protótipos — léxico/fuzzy, semântico via embedding OpenAI, e um híbrido — com um gabarito de perguntas e métricas de acurácia/latência antes de escolher o backend definitivo.
 
-**O protótipo A (fuzzy, via `rapidfuzz`) foi o escolhido e implementado**; os protótipos B (embedding) e C (híbrido) e o script de avaliação comparativo ficaram fora do escopo desta entrega — decisão de escopo, não lacuna técnica:
+**O protótipo A (fuzzy, via `rapidfuzz`) foi o escolhido e implementado**; os protótipos B (embedding) e C (híbrido) ficaram fora do escopo desta entrega — decisão de escopo, não lacuna técnica.
 
-- Fuzzy matching é determinístico, sem custo/dependência de API externa, e cobre bem o caso mais comum do desafio (perguntas próximas ao texto da FAQ, com ou sem erro de digitação).
-- O ponto fraco conhecido é paráfrase com vocabulário muito diferente ("como cancelo minha conta" vs "quero encerrar meu cadastro") — nesse caso, o chatbot retorna sem-resposta em vez de um match forçado.
-- O schema já foi desenhado para suportar a extensão: `FaqItem` e `Interacao` têm coluna `embedding` (`pgvector`), e `SimilarityService` é a única fronteira de "quão parecida é uma pergunta" no código — nenhum outro módulo lê `embedding` ou compara texto diretamente. Adicionar um backend de embedding depois não deveria exigir tocar em `ChatService` nem em quem consome métricas.
+O gabarito de avaliação em si foi implementado (`scripts/similarity_eval_dataset.json`, 21 casos — 10 fáceis, 5 paráfrases, 5 com erro de digitação, 1 proposital sem match) e roda contra o backend ativo via `scripts/eval_similarity.py`:
+
+```bash
+docker compose exec backend python -m scripts.eval_similarity
+```
+
+Resultado (tabela bruta em `docs/similarity_eval_output.txt`):
+
+| Categoria | Acurácia | Casos |
+|---|---|---|
+| Caso fácil (texto próximo ao original) | 100.0% | 10/10 |
+| Paráfrase (vocabulário diferente) | 0.0% | 0/5 |
+| Erro de digitação | 100.0% | 5/5 |
+| Sem match (proposital) | 100.0% | 1/1 |
+| **Total** | **76.2%** | **16/21** |
+
+Latência média: ~2-3ms por consulta.
+
+O resultado confirma empiricamente o trade-off já esperado do fuzzy matching: cobre bem o caso mais comum do desafio (pergunta próxima ao texto da FAQ, com ou sem erro de digitação) — 100% de acerto e latência desprezível nesses dois grupos —, mas falha sistematicamente em paráfrase com vocabulário diferente ("como cancelo minha conta" vs "quero encerrar meu cadastro"), retornando sem-resposta em vez de um match forçado nesse caso. Esse é exatamente o cenário que o protótipo B (embedding semântico) resolveria — não implementado nesta entrega, mas o schema já suporta a extensão: `FaqItem` e `Interacao` têm coluna `embedding` (`pgvector`), e `SimilarityService` é a única fronteira de "quão parecida é uma pergunta" no código — nenhum outro módulo lê `embedding` ou compara texto diretamente. Adicionar um backend de embedding depois não deveria exigir tocar em `ChatService` nem em quem consome métricas.
 
 ## Estrutura do projeto
 
@@ -89,6 +105,7 @@ backend/
 │   └── auth/                     # otp_store.py, jwt.py
 ├── alembic/                     # Migrations (extensão pgvector + 3 tabelas)
 ├── scripts/seed_faq.py           # Seed idempotente, rodado automaticamente no boot
+├── scripts/eval_similarity.py    # Gabarito de similaridade — ver "Decisão" acima
 ├── tests/                        # 30 testes, espelha app/, sem depender de Postgres real
 └── Dockerfile
 
@@ -144,5 +161,6 @@ npm run test          # 29 passed
 ## Fora do escopo desta entrega (decisões conscientes)
 
 - **`SIMILARITY_BACKEND=fuzzy` único** — ver seção de decisão acima.
-- **CI/CD desativado.** Foi construído (GitHub Actions com gate de review por IA) e depois desativado. Os arquivos `.github/workflows/*.yml` continuam no repositório como referência, mas não estão ativos — branch protection foi removida, trabalho commitado direto na branch principal.
 - **Sem testes E2E** (Playwright/Cypress).
+
+CI/CD ativo em `.github/workflows/ci.yml` (GitHub Actions) — lint, typecheck e testes de backend e frontend, mais build do Docker Compose, em todo push/PR na `master`. Sem branch protection configurada, então nada bloqueia merge automaticamente hoje — os gates rodam e reportam, mas o merge continua manual.

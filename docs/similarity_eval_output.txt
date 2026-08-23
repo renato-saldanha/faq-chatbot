@@ -1,0 +1,33 @@
+Tipo         Acerto  Score   Latência   Pergunta
+------------------------------------------------------------------------------------------
+caso_facil   OK      1.00      12.79ms  Como eu cadastro uma conta nova?
+caso_facil   OK      1.00       2.09ms  Como recupero minha senha?
+caso_facil   OK      1.00       1.99ms  Como cancelo minha conta?
+caso_facil   OK      1.00       1.98ms  Quais formas de pagamento são aceitas?
+caso_facil   OK      1.00       1.86ms  Como solicito reembolso?
+caso_facil   OK      1.00       2.00ms  O aplicativo não abre, o que faço?
+caso_facil   OK      1.00       1.93ms  Qual o prazo de entrega?
+caso_facil   OK      1.00       2.35ms  Como rastreio meu pedido?
+caso_facil   OK      1.00       1.99ms  O que está incluso no plano Premium?
+caso_facil   OK      1.00       1.89ms  Meus dados são compartilhados com terceiros?
+parafrase    FALHOU  0.66       1.90ms  Quero encerrar meu cadastro, como faço?
+parafrase    FALHOU  0.61       1.91ms  Esqueci minha senha, e agora?
+parafrase    FALHOU  -          1.96ms  Vocês aceitam boleto?
+parafrase    FALHOU  0.69       1.89ms  Quanto tempo demora pra chegar meu produto?
+parafrase    FALHOU  -          1.81ms  Quero falar com uma pessoa de verdade, não um
+typo         OK      0.76       1.88ms  Como recupero minha cenha?
+typo         OK      0.96       1.86ms  Qauis formas de pagameto são aceitas?
+typo         OK      0.92       1.92ms  Como cadastro uma conta noba?
+typo         OK      0.98       1.80ms  Qual o horario de atendimeto?
+typo         OK      0.96       1.95ms  Como rastrio meu pedid?
+sem_match    OK      -          1.85ms  Qual a previsão do tempo amanhã em Marte?
+
+Categoria       Acurácia     Casos
+----------------------------------------
+caso_facil       100.0%      10/10
+parafrase          0.0%      0/5
+typo             100.0%      5/5
+sem_match        100.0%      1/1
+----------------------------------------
+TOTAL             76.2%      16/21
+Latência média: 2.46ms
