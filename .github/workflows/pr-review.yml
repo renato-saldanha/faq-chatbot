@@ -9,7 +9,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: read
   id-token: write
 
@@ -42,6 +42,7 @@ jobs:
             exatamente as instruções abaixo (definição do agente pr-reviewer deste projeto):
 
             ${{ steps.agent_prompt.outputs.AGENT_INSTRUCTIONS }}
+          claude_args: --model claude-sonnet-5
 
       - name: Extract verdict from execution log
         id: extract
@@ -100,7 +101,7 @@ jobs:
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Commit review log
-        if: false && always() && steps.extract.outcome == 'success'
+        if: always() && steps.extract.outcome == 'success'
         env:
           FULL_TEXT: ${{ steps.extract.outputs.FULL_TEXT }}
           VERDICT: ${{ steps.extract.outputs.VERDICT }}
