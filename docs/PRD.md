@@ -175,3 +175,5 @@ Fora de escopo desta decisão: múltiplos admins, recuperação de conta, "lembr
 <!-- validação: confirma que o gate de review roda sem bootstrap paradox neste PR -->
 
 <!-- validacao: gate sem --agent, apos fix do PR #4 -->
+
+<!-- validacao final: gate com execution_file + log persistido -->

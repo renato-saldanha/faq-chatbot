@@ -43,7 +43,7 @@ jobs:
 
             ${{ steps.agent_prompt.outputs.AGENT_INSTRUCTIONS }}
           claude_args: >-
-            --allowedTools "Read,Grep,Glob,Bash(git *),Bash(ls *),Bash(find *)"
+            --allowedTools "Read" "Grep" "Glob" "Bash(git *)" "Bash(ls *)" "Bash(find *)"
 
       - name: Extract verdict from execution log
         id: extract
