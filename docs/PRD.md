@@ -61,7 +61,13 @@ Refinamentos aplicados sobre o(s) protótipo(s) selecionado(s):
 - **Normalização de texto antes de vetorizar**: lowercase, remoção de acentuação/pontuação, antes de gerar o embedding — reduz ruído e permite cache de embedding por hash do texto normalizado (evita recalcular para a mesma pergunta recorrente).
 - **Limiar adaptativo em vez de fixo**: aceitar o melhor candidato não só por um `SIMILARITY_THRESHOLD` absoluto, mas também por margem relativa ao segundo colocado — evita aceitar um match fraco quando nada realmente parecido existe na base, e evita rejeitar um match bom em domínios onde o score absoluto tende a ser baixo.
 
-Critério de escolha: rodar as mesmas ~20 perguntas de teste (algumas parafraseadas, algumas com typos) contra os três protótipos, comparar taxa de acerto e latência, documentar no README a decisão final. Chave de API em `.env` (`OPENAI_API_KEY`, `OPENAI_MODEL=gpt-4.1-mini` ou `text-embedding-3-small` conforme uso), nunca commitada — só `.env.example`.
+**Critério de escolha — objetivo, não subjetivo:** um gabarito fixo de ~20 perguntas de teste (`scripts/similarity_eval_dataset.json`), cada uma com o `faq_item_id` esperado como resposta (ou `null` para as propositalmente sem match, testando C5). Composição do gabarito: ~10 perguntas próximas ao texto original da FAQ (caso fácil), ~5 paráfrases com vocabulário diferente (testa força do protótipo B/C), ~5 com erros de digitação (testa força do protótipo A). Rodar os três protótipos contra o mesmo gabarito e medir:
+- **Acurácia** = (nº de respostas que batem com o `faq_item_id` esperado) / 20.
+- **Latência média** por consulta.
+
+**Regra de decisão:** vence o protótipo com maior acurácia; empate de acurácia → vence o de menor latência média. Resultado (acurácia, latência, protótipo vencedor) documentado no README com a tabela bruta do `scripts/eval_similarity.py`, não só a conclusão.
+
+Chave de API em `.env` (`OPENAI_API_KEY`, `OPENAI_MODEL=gpt-4.1-mini` ou `text-embedding-3-small` conforme uso), nunca commitada — só `.env.example`.
 
 Técnicas avaliadas e descartadas para este escopo (custo/complexidade não justificados pelo enunciado): reranking em duas etapas (cross-encoder ou LLM sobre os top-K candidatos) e expansão de consulta via paráfrases geradas por LLM.
 
@@ -87,26 +93,32 @@ interacao
 ```
 backend/ (FastAPI)
 ├── main.py                    # monta o app, registra dependency providers
-├── config.py                  # pydantic-settings, inclui OPENAI_API_KEY/MODEL
+├── config.py                  # pydantic-settings, inclui OPENAI_API_KEY/MODEL/ADMIN_EMAIL/SMTP_*
 ├── api/
-│   ├── chat.py                 # POST /api/chat/ask
-│   ├── faq.py                  # CRUD da base de conhecimento
-│   └── metrics.py              # GET /api/metrics/summary|top-questions|unanswered|categories|timeseries
+│   ├── chat.py                 # POST /api/chat/ask (público)
+│   ├── faq.py                  # CRUD da base de conhecimento (protegido — require_admin_session)
+│   ├── auth.py                  # POST /api/auth/otp/request, POST /api/auth/otp/verify
+│   └── metrics.py              # GET /api/metrics/summary|top-questions|unanswered|categories|timeseries (protegido)
 ├── services/
 │   ├── similarity_service.py   # interface SimilarityService + 3 estratégias (fuzzy/embedding/híbrida)
 │   ├── chat_service.py         # orquestra busca + registro de interação
-│   └── clustering_service.py   # agrupa perguntas sem resposta por similaridade (D3)
+│   ├── clustering_service.py   # agrupa perguntas sem resposta por similaridade (D3)
+│   └── auth_service.py         # gera/valida OTP, emite JWT — single-admin via ADMIN_EMAIL
 ├── repositories/
 │   ├── faq_repository.py
-│   ├── interaction_repository.py
+│   ├── interacao_repository.py
 │   ├── faq_metrics_repository.py        # D2, D4 — leitura sobre faq_item/interacao por categoria/frequência
 │   └── timeseries_metrics_repository.py # D1, D5 — leitura sobre interacao por período/dia
+├── auth/
+│   ├── otp_store.py             # OTP em memória (TTL 5min, single-use) — sem tabela dedicada
+│   └── jwt.py                   # emissão/validação do cookie de sessão
 └── models/ (SQLAlchemy) + alembic/
 
 frontend/ (Next.js)
-├── app/(chat)/page.tsx                 # interface de chat
-├── app/(dashboard)/metricas/page.tsx   # cards + gráficos + tabelas
-├── app/(dashboard)/faq/page.tsx        # CRUD admin da base de conhecimento
+├── app/(chat)/page.tsx                 # interface de chat — pública
+├── app/(auth)/login/page.tsx           # form de e-mail + OTP
+├── app/(dashboard)/metricas/page.tsx   # cards + gráficos + tabelas — atrás de login
+├── app/(dashboard)/faq/page.tsx        # CRUD admin da base de conhecimento — atrás de login
 └── components/domain/
     ├── chat-window.tsx
     ├── category-breakdown-chart.tsx    # gráfico de barra/pizza (Recharts)
@@ -139,3 +151,23 @@ O que era um único `MetricsRepository` acumulando 5 responsabilidades de leitur
 - Canais externos (WhatsApp, etc).
 - Integração com BI externo.
 - Qualquer domínio de negócio alheio ao FAQ/chatbot descrito no enunciado.
+
+## 9. Autenticação do painel admin (decisão de projeto — enunciado não exige, risco de deixar aberto)
+
+O chat (`/chat`) é público, sem login — é o produto voltado ao usuário final, consistente com o enunciado. O painel admin (`/faq`, CRUD da base de conhecimento e categorias) fica **atrás de login via OTP por e-mail**, single-admin, sem tabela de usuários:
+
+- `ADMIN_EMAIL` fixo no `.env` — único e-mail autorizado.
+- Fluxo: usuário informa e-mail no form de login → backend compara com `ADMIN_EMAIL`; se bater, gera OTP (6 dígitos, TTL 5min, single-use) e envia por e-mail via SMTP; se não bater, mesma resposta genérica (evita enumerar se o e-mail é válido, mesmo princípio anti-enumeração de OTP já visto em sistemas de auth por telefone).
+- Verificação do OTP → JWT em cookie `httpOnly`, `secure`, `samesite=strict` (nunca no body/localStorage).
+- SMTP simples (`smtplib` — conta existente, senha de app), sem provedor de e-mail transacional dedicado — evita mais uma credencial paga além da já usada para similaridade (protótipo B/C).
+- `/api/chat/*` continua público; `/api/faq/*` (CRUD) exige o cookie de sessão válido — dependency `require_admin_session` no FastAPI.
+- Rate limit simples no endpoint de solicitar OTP (ex. 3 tentativas/15min) para não virar vetor de spam de e-mail.
+
+Fora de escopo desta decisão: múltiplos admins, recuperação de conta, "lembrar de mim" além do TTL do JWT — nenhum desses é pedido pelo enunciado nem necessário para um único administrador fixo.
+
+## 10. Bootstrap de dados no deploy
+
+`docker compose up` precisa deixar a aplicação usável sem passo manual extra:
+- Migration do Alembic roda automaticamente no boot do container `backend` (entrypoint aplica `alembic upgrade head` antes de subir o `uvicorn`), não como instrução manual no README.
+- Seed da base de FAQ (`scripts/seed_faq.py`, criado na Parte 1) roda automaticamente no primeiro boot se a tabela `faq_item` estiver vazia — checagem idempotente, não recria em boots subsequentes. Sem isso, o avaliador abre o chat e não há nenhuma pergunta cadastrada para testar.
+- README documenta esse comportamento explicitamente (Parte 9), incluindo como resetar o banco para testar o fluxo de admin cadastrando do zero, se o avaliador quiser.

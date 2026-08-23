@@ -31,43 +31,10 @@ jobs:
           prompt: |
             Revise o diff desta PR (base: origin/${{ github.event.pull_request.base.ref }}) seguindo
             exatamente as instruções do agente pr-reviewer definido em .claude/agents/pr-reviewer.md.
-          claude_args: |
-            {
-              "agent": "./.claude/agents/pr-reviewer.md",
-              "json-schema": {
-                "type": "object",
-                "required": ["verdict", "showstoppers", "concerns", "highlights"],
-                "properties": {
-                  "verdict": {"type": "string", "enum": ["SHIP_CLEAN", "SHIP", "FIX_AND_RESUBMIT"]},
-                  "showstoppers": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "required": ["file", "description", "reason"],
-                      "properties": {
-                        "file": {"type": "string"},
-                        "line": {"type": "integer"},
-                        "description": {"type": "string"},
-                        "reason": {"type": "string"}
-                      }
-                    }
-                  },
-                  "concerns": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "required": ["file", "description"],
-                      "properties": {
-                        "file": {"type": "string"},
-                        "line": {"type": "integer"},
-                        "description": {"type": "string"}
-                      }
-                    }
-                  },
-                  "highlights": {"type": "array", "items": {"type": "string"}}
-                }
-              }
-            }
+          claude_args: >-
+            --agent ./.claude/agents/pr-reviewer.md
+            --json-schema
+            '{"type":"object","required":["verdict","showstoppers","concerns","highlights"],"properties":{"verdict":{"type":"string","enum":["SHIP_CLEAN","SHIP","FIX_AND_RESUBMIT"]},"showstoppers":{"type":"array","items":{"type":"object","required":["file","description","reason"],"properties":{"file":{"type":"string"},"line":{"type":"integer"},"description":{"type":"string"},"reason":{"type":"string"}}}},"concerns":{"type":"array","items":{"type":"object","required":["file","description"],"properties":{"file":{"type":"string"},"line":{"type":"integer"},"description":{"type":"string"}}}},"highlights":{"type":"array","items":{"type":"string"}}}}'
 
       - name: Validate agent output
         id: validate
