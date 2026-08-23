@@ -85,6 +85,7 @@ Referência: `PRD.md`. Cada parte é entregável e testável isoladamente antes 
 - `README.md`: contexto, stack, decisão de similaridade (com a tabela bruta do protótipo, não só a conclusão — PRD §5), como rodar (`docker compose up`), variáveis de ambiente (incluindo `ADMIN_EMAIL`/SMTP/`JWT_SECRET_KEY`), estrutura de pastas, comportamento de bootstrap automático (migration + seed no primeiro boot, PRD §10) e como resetar o banco para testar o cadastro do zero.
 - Verificar todos os critérios de avaliação do PRD §4 como checklist final.
 - Repositório GitHub público (ou conforme instrução do processo seletivo), commits organizados por parte/feature.
+- CI/CD já configurado desde o início do projeto (build + gate de review automatizado, PRD §11) — evidência de execução do review fica em comentário na PR, não em arquivo versionado.
 
 ## Ordem recomendada de execução
 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11, com possibilidade de paralelizar 4 com 3 (frontend de chat com mock) e 7 com 5 (dashboard com mock) se quiser adiantar UI enquanto a API é fechada — mas dado que é solo, sequencial tende a ser mais previsível. Parte 6 (auth) precisa terminar antes de 7/8 ficarem "prontas de verdade" (a UI pode ser construída em paralelo, mas o gate de sessão é pré-requisito para considerar 7/8 completas).
