@@ -1,10 +1,14 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import Boolean, DateTime, ForeignKey, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.categoria import Categoria
 
 
 class FaqItem(Base):
@@ -21,4 +25,4 @@ class FaqItem(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    categoria: Mapped["Categoria"] = relationship(back_populates="faq_items")  # noqa: F821
+    categoria: Mapped["Categoria"] = relationship(back_populates="faq_items")

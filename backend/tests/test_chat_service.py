@@ -11,7 +11,11 @@ class TestChatServiceAsk:
     async def test_com_match_retorna_resposta_e_grava_interacao(self) -> None:
         similarity_service = AsyncMock()
         similarity_service.find_best_match.return_value = MatchResult(
-            faq_item_id=1, resposta="Acesse a página de cadastro.", categoria="Conta", score=0.95
+            faq_item_id=1,
+            categoria_id=2,
+            resposta="Acesse a página de cadastro.",
+            categoria="Conta",
+            score=0.95,
         )
         interacao_repository = AsyncMock()
         session = AsyncMock()
@@ -27,6 +31,7 @@ class TestChatServiceAsk:
         _, kwargs = interacao_repository.create.await_args
         assert kwargs["sem_resposta"] is False
         assert kwargs["faq_item_id"] == 1
+        assert kwargs["categoria_id"] == 2
 
     @pytest.mark.asyncio
     async def test_sem_match_retorna_fallback_e_grava_interacao(self) -> None:

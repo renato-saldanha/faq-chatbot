@@ -51,7 +51,7 @@ class ChatService:
         await self._interacao_repository.create(
             pergunta_usuario=pergunta,
             faq_item_id=match.faq_item_id,
-            categoria_id=None,
+            categoria_id=match.categoria_id,
             score=match.score,
             sem_resposta=False,
         )
