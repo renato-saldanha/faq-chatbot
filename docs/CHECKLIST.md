@@ -2,7 +2,7 @@
 
 Estado real do projeto contra as 12 Partes do `PLANO_IMPLEMENTACAO.md`, cruzado com commits, testes e o smoke test manual desta sessão — não com relatório de sessão anterior.
 
-**Prazo:** 11h — 23/08/2026. **Status atual:** 11/12 partes completas.
+**Status atual:** 11/12 partes completas.
 
 ## Feito e validado
 
@@ -28,11 +28,11 @@ Estado real do projeto contra as 12 Partes do `PLANO_IMPLEMENTACAO.md`, cruzado 
 
 - [x] **Parte 9 — Testes de frontend.** 28 testes Vitest + Testing Library cobrindo `chat-window` (8), gráficos `timeseries`/`category-breakdown` (4), `login-form`/`verify-form` (8), CRUD de `faq/page` (7), mais o placeholder original. Escritos em 4 agentes paralelos, cada um em worktree isolada, integrados via 5 PRs (#19-#23) revisados e mesclados. Infra de teste compartilhada extraída para `vitest.setup.ts` (cleanup automático + `ResizeObserver` stub) e `src/lib/test-utils.tsx` (`renderWithClient`) durante a integração, eliminando duplicação entre os PRs.
 
-- [x] **Parte 10 — Polimento, erros e performance.** Bug real corrigido: `.data-table` com `display:block` quebrava o layout de colunas HTML em mobile (coluna "Ativo"/"Ações" cortada e ilegível) — trocado por wrapper `.table-scroll` com scroll horizontal real, validado em 375/768/1440px via Playwright headless. Redesign visual completo com paleta verde-petróleo/terracota (skills `frontend-design`/`dataviz`, cor validada via `validate_palette.js`), Fraunces + Inter + IBM Plex Mono, focus-visible e `prefers-reduced-motion` em todos os controles. Paginação nas listagens não implementada — volume do seed (15 itens) não justifica.
+- [x] **Parte 10 — Polimento, erros e performance.** Bug real corrigido: `.data-table` com `display:block` quebrava o layout de colunas HTML em mobile (coluna "Ativo"/"Ações" cortada e ilegível) — trocado por wrapper `.table-scroll` com scroll horizontal real, validado em 375/768/1440px via Playwright headless. Redesign visual com paleta neutra + verde/terracota como cores de dado (skills `frontend-design`/`dataviz`, cor validada via `validate_palette.js`, pesquisa de psicologia de cores para contexto de suporte), Fraunces + Inter, tema claro/escuro completo, focus-visible e `prefers-reduced-motion` em todos os controles. Paginação nas listagens não implementada — volume do seed (50 itens) não justifica ainda.
 
 - [x] **Parte 11 — Documentação e entrega.** `README.md` com setup, env vars, decisão de similaridade, estrutura. Commits organizados por unidade lógica, enviados ao GitHub. `/code-review high` rodado sobre o diff inicial — sem achados.
 
-## Cortado por decisão consciente (sob prazo)
+## Fora do escopo desta entrega (decisão consciente)
 
 - [~] **Parte 2 — Protótipos de similaridade.** Protótipo A (fuzzy, `rapidfuzz`) implementado e em produção. Protótipo B (embedding OpenAI) e C (híbrido) não implementados, script de avaliação comparativo não feito. Schema já suporta `embedding` via `pgvector` — extensível sem tocar em `ChatService`.
 

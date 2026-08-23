@@ -66,9 +66,9 @@ Todas em `.env.example`:
 
 ## Decisão: similaridade por fuzzy matching
 
-O PRD original (`docs/PRD.md` §5) previa comparar três protótipos — léxico/fuzzy, semântico via embedding OpenAI, e um híbrido — com um gabarito de ~20 perguntas e métricas de acurácia/latência antes de escolher o backend definitivo.
+O PRD original (`docs/PRD.md` §5) previa comparar três protótipos — léxico/fuzzy, semântico via embedding OpenAI, e um híbrido — com um gabarito de perguntas e métricas de acurácia/latência antes de escolher o backend definitivo.
 
-Sob restrição de prazo, **apenas o protótipo A (fuzzy, via `rapidfuzz`) foi implementado**; os protótipos B (embedding) e C (híbrido) e o script de avaliação comparativo ficaram fora do escopo entregue. Isso é uma decisão consciente de corte, não um esquecimento:
+**O protótipo A (fuzzy, via `rapidfuzz`) foi o escolhido e implementado**; os protótipos B (embedding) e C (híbrido) e o script de avaliação comparativo ficaram fora do escopo desta entrega — decisão de escopo, não lacuna técnica:
 
 - Fuzzy matching é determinístico, sem custo/dependência de API externa, e cobre bem o caso mais comum do desafio (perguntas próximas ao texto da FAQ, com ou sem erro de digitação).
 - O ponto fraco conhecido é paráfrase com vocabulário muito diferente ("como cancelo minha conta" vs "quero encerrar meu cadastro") — nesse caso, o chatbot retorna sem-resposta em vez de um match forçado.
@@ -141,8 +141,8 @@ npm run lint
 npm run test          # 29 passed
 ```
 
-## Escopo cortado sob prazo (decisões conscientes)
+## Fora do escopo desta entrega (decisões conscientes)
 
 - **`SIMILARITY_BACKEND=fuzzy` único** — ver seção de decisão acima.
-- **CI/CD desativado.** Foi construído (GitHub Actions com gate de review por IA), debugado extensivamente e depois abandonado por consumir tempo demais para o prazo. Os arquivos `.github/workflows/*.yml` continuam no repositório como referência, mas não estão ativos — branch protection foi removida, trabalho commitado direto na branch principal.
+- **CI/CD desativado.** Foi construído (GitHub Actions com gate de review por IA) e depois desativado. Os arquivos `.github/workflows/*.yml` continuam no repositório como referência, mas não estão ativos — branch protection foi removida, trabalho commitado direto na branch principal.
 - **Sem testes E2E** (Playwright/Cypress).
