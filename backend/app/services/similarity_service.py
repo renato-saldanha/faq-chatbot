@@ -14,6 +14,7 @@ from app.models import FaqItem
 @dataclass(frozen=True)
 class MatchResult:
     faq_item_id: int
+    categoria_id: int
     resposta: str
     categoria: str
     score: float
@@ -70,6 +71,7 @@ class FuzzySimilarityService(SimilarityService):
 
         return MatchResult(
             faq_item_id=best_item.id,
+            categoria_id=best_item.categoria_id,
             resposta=best_item.resposta,
             categoria=best_item.categoria.nome,
             score=best_score,
