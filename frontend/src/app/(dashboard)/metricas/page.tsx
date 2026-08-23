@@ -84,52 +84,56 @@ export default function MetricasPage() {
 
       <section className="table-section">
         <h2>Perguntas mais frequentes</h2>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Pergunta</th>
-              <th>Quantidade</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(topQuestions.data ?? []).map((q) => (
-              <tr key={q.faq_item_id}>
-                <td>{q.pergunta}</td>
-                <td>{q.quantidade}</td>
-              </tr>
-            ))}
-            {topQuestions.data?.length === 0 && (
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
               <tr>
-                <td colSpan={2}>Sem dados no período.</td>
+                <th>Pergunta</th>
+                <th>Quantidade</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {(topQuestions.data ?? []).map((q) => (
+                <tr key={q.faq_item_id}>
+                  <td>{q.pergunta}</td>
+                  <td>{q.quantidade}</td>
+                </tr>
+              ))}
+              {topQuestions.data?.length === 0 && (
+                <tr>
+                  <td colSpan={2}>Sem dados no período.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="table-section">
         <h2>Perguntas sem resposta</h2>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Pergunta</th>
-              <th>Data</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(unanswered.data ?? []).map((q) => (
-              <tr key={q.id}>
-                <td>{q.pergunta_usuario}</td>
-                <td>{new Date(q.criado_em).toLocaleString("pt-BR")}</td>
-              </tr>
-            ))}
-            {unanswered.data?.length === 0 && (
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
               <tr>
-                <td colSpan={2}>Nenhuma pergunta sem resposta no período.</td>
+                <th>Pergunta</th>
+                <th>Data</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {(unanswered.data ?? []).map((q) => (
+                <tr key={q.id}>
+                  <td>{q.pergunta_usuario}</td>
+                  <td>{new Date(q.criado_em).toLocaleString("pt-BR")}</td>
+                </tr>
+              ))}
+              {unanswered.data?.length === 0 && (
+                <tr>
+                  <td colSpan={2}>Nenhuma pergunta sem resposta no período.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   );

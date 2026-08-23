@@ -32,3 +32,6 @@ pnpm-debug.log*
 
 # Docker
 docker-compose.override.yml
+
+# Agent worktrees (local, per-session)
+.claude/worktrees/
