@@ -171,3 +171,5 @@ Fora de escopo desta decisão: múltiplos admins, recuperação de conta, "lembr
 - Migration do Alembic roda automaticamente no boot do container `backend` (entrypoint aplica `alembic upgrade head` antes de subir o `uvicorn`), não como instrução manual no README.
 - Seed da base de FAQ (`scripts/seed_faq.py`, criado na Parte 1) roda automaticamente no primeiro boot se a tabela `faq_item` estiver vazia — checagem idempotente, não recria em boots subsequentes. Sem isso, o avaliador abre o chat e não há nenhuma pergunta cadastrada para testar.
 - README documenta esse comportamento explicitamente (Parte 9), incluindo como resetar o banco para testar o fluxo de admin cadastrando do zero, se o avaliador quiser.
+
+<!-- validação: confirma que o gate de review roda sem bootstrap paradox neste PR -->
