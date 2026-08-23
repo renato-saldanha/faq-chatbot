@@ -1,19 +1,7 @@
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { CategoryBreakdownChart } from "./category-breakdown-chart";
 import type { CategoryBreakdown } from "@/types/api";
-
-beforeAll(() => {
-  global.ResizeObserver = class ResizeObserver {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  };
-});
-
-afterEach(() => {
-  cleanup();
-});
 
 describe("CategoryBreakdownChart", () => {
   it("mostra estado 'sem dados' e não lança exceção quando o array está vazio", () => {
