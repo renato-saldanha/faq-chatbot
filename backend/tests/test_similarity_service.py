@@ -1,3 +1,4 @@
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import numpy as np
@@ -12,7 +13,11 @@ from app.services.similarity_service import (
 
 
 def _make_faq_item(
-    id_: int, pergunta: str, resposta: str, categoria_nome: str, embedding: list[float] | None = None
+    id_: int,
+    pergunta: str,
+    resposta: str,
+    categoria_nome: str,
+    embedding: "list[float] | np.ndarray[Any, np.dtype[Any]] | None" = None,
 ) -> MagicMock:
     item = MagicMock()
     item.id = id_
