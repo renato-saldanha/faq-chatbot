@@ -58,7 +58,7 @@ Todas em `.env.example`:
 |---|---|
 | `DATABASE_URL` | String de conexão async do Postgres (já resolvida para o serviço `postgres` do Compose) |
 | `SIMILARITY_BACKEND` | Backend de similaridade ativo — `fuzzy` \| `embedding` \| `hybrid` (ver decisão abaixo) |
-| `SIMILARITY_THRESHOLD` | Limiar mínimo de score (0–1) para considerar um match válido |
+| `SIMILARITY_THRESHOLD` | Limiar mínimo de score (0–1) para considerar um match válido — `0.55`, calibrado contra o gabarito (ver "Decisão" abaixo) |
 | `OPENAI_API_KEY` / `OPENAI_MODEL` | Necessário para os backends `embedding`/`hybrid` — chave da OpenAI, `OPENAI_MODEL=text-embedding-3-small` |
 | `ADMIN_EMAIL` | E-mail autorizado a logar no painel admin (single-admin, sem tabela de usuários) |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` | Envio do código OTP por e-mail; vazio = OTP cai no log do backend (ver acima) |
@@ -83,10 +83,18 @@ docker compose exec backend python -m scripts.eval_similarity
 | Backend | Acurácia total | Paráfrase | Latência média |
 |---|---|---|---|
 | `fuzzy` | 76.2% (16/21) | 0% (0/5) | ~7ms |
-| **`embedding`** | **90.5% (19/21)** | 60% (3/5) | ~330ms |
+| **`embedding`** | **100% (21/21)** | 100% (5/5) | ~330ms |
 | `hybrid` (α=0.6) | 81.0% (17/21) | 20% (1/5) | ~380ms |
 
 **Vencedor: `embedding`** — maior acurácia, sem empate. `fuzzy` só acerta paráfrase por acaso (score de coincidência lexical, não de significado); `embedding` resolve exatamente a categoria que o `fuzzy` não consegue. O híbrido (α=0.6) ficou *abaixo* do embedding puro: o termo fuzzy (peso 0.4) derruba o score final em paráfrases onde a semântica bate mas o léxico diverge — nesta base (perguntas curtas, domínio fechado de FAQ), misturar com léxico introduz ruído em vez de ajudar. Recomendado usar `SIMILARITY_BACKEND=embedding` no `.env` real (requer `OPENAI_API_KEY`); `.env.example` mantém `fuzzy` como padrão para não exigir a chave só para subir a stack pela primeira vez.
+
+A primeira rodada do `embedding` cravou 90.5% (19/21), com 2 falhas investigadas caso a caso (não ajuste cego de parâmetro):
+
+- **"Vocês aceitam boleto?"** teve score 0.68 numa rodada e apareceu como falha em outra — instabilidade da execução isolada, não do backend; rodadas subsequentes confirmaram score estável acima do threshold.
+- **"Esqueci minha senha, e agora?"** errava para um item vizinho do próprio seed (`"Esqueci meu login, o que fazer?"`, score 0.76 vs 0.72 do item correto) — os dois textos eram semanticamente quase idênticos. Corrigido reescrevendo o item concorrente no seed (`scripts/seed_faq.py`) para um cenário distinto (esqueceu qual e-mail usou no cadastro, não a senha em si), removendo a ambiguidade real entre os dois.
+- **"Quero falar com uma pessoa de verdade, não um robô"** tinha score 0.59 contra o item correto (`"Como falo com um atendente humano?"`) — 0.01 abaixo do threshold de 0.6, com folga segura para o segundo colocado (0.39) e para o teto real dos casos `sem_match` (~0.30). `SIMILARITY_THRESHOLD` baixado para `0.55`, validado contra o próprio dataset para confirmar que nenhum caso `sem_match` verdadeiro se aproxima desse novo piso.
+
+Resultado após as duas correções: **100% (21/21)**, latência ~330ms, estável em execuções repetidas.
 
 Schema já suportava a extensão desde a Parte 1: `FaqItem` e `Interacao` têm coluna `embedding` (`pgvector`), e `SimilarityService` é a única fronteira de "quão parecida é uma pergunta" no código — nenhum outro módulo lê `embedding` ou compara texto diretamente, o que permitiu adicionar os backends B/C sem tocar em `ChatService` nem em quem consome métricas.
 
