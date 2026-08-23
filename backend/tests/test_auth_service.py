@@ -91,3 +91,15 @@ def test_otp_store_rate_limit_bloqueia_apos_limite():
         otp_store.record_request(email)
 
     assert otp_store.can_request(email) is False
+
+
+def test_otp_store_bloqueia_brute_force_de_verificacao():
+    otp_store = OtpStore()
+    email = "admin@example.com"
+    code = otp_store.generate(email)
+
+    for _ in range(5):
+        assert otp_store.verify(email, "000000") is False
+
+    # código correto, mas o limite de tentativas de verificação já foi atingido
+    assert otp_store.verify(email, code) is False
