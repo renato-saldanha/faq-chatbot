@@ -9,7 +9,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: read
   id-token: write
 
@@ -100,7 +100,7 @@ jobs:
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Commit review log
-        if: always() && steps.extract.outcome == 'success'
+        if: false && always() && steps.extract.outcome == 'success'
         env:
           FULL_TEXT: ${{ steps.extract.outputs.FULL_TEXT }}
           VERDICT: ${{ steps.extract.outputs.VERDICT }}
