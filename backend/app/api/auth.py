@@ -31,9 +31,7 @@ def get_auth_service(
 
 
 @router.post("/otp/request", response_model=AuthOkResponse)
-async def request_otp(
-    body: OtpRequestBody, service: AuthService = Depends(get_auth_service)
-) -> AuthOkResponse:
+async def request_otp(body: OtpRequestBody, service: AuthService = Depends(get_auth_service)) -> AuthOkResponse:
     await service.request_otp(body.email)
     return AuthOkResponse(authenticated=False)
 

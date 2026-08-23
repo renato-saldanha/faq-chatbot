@@ -5,6 +5,7 @@ Revises:
 Create Date: 2026-08-23
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -44,12 +45,8 @@ def upgrade() -> None:
         "interacao",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("pergunta_usuario", sa.Text(), nullable=False),
-        sa.Column(
-            "faq_item_id", sa.Integer(), sa.ForeignKey("faq_item.id", ondelete="SET NULL"), nullable=True
-        ),
-        sa.Column(
-            "categoria_id", sa.Integer(), sa.ForeignKey("categoria.id", ondelete="SET NULL"), nullable=True
-        ),
+        sa.Column("faq_item_id", sa.Integer(), sa.ForeignKey("faq_item.id", ondelete="SET NULL"), nullable=True),
+        sa.Column("categoria_id", sa.Integer(), sa.ForeignKey("categoria.id", ondelete="SET NULL"), nullable=True),
         sa.Column("score_similaridade", sa.Float(), nullable=True),
         sa.Column("sem_resposta", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("embedding", Vector(1536), nullable=True),
