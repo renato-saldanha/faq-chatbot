@@ -11,7 +11,10 @@ SEED = [
         "Conta",
         [
             ("Como eu cadastro uma conta nova?", "Acesse a página de cadastro e preencha seu e-mail e senha."),
-            ("Como recupero minha senha?", "Clique em 'Esqueci minha senha' na tela de login e siga as instruções enviadas por e-mail."),
+            (
+                "Como recupero minha senha?",
+                "Clique em 'Esqueci minha senha' na tela de login e siga as instruções enviadas por e-mail.",
+            ),
             ("Como cancelo minha conta?", "Entre em contato pelo suporte para solicitar o encerramento do cadastro."),
             ("Posso mudar meu e-mail de cadastro?", "Sim, isso pode ser feito nas configurações da conta."),
             ("Esqueci meu login, o que fazer?", "Use a opção 'Esqueci minha senha' informando o e-mail cadastrado."),
@@ -32,7 +35,10 @@ SEED = [
         "suporte",
         "Suporte Técnico",
         [
-            ("O aplicativo não abre, o que faço?", "Tente reinstalar o aplicativo ou verificar atualizações disponíveis."),
+            (
+                "O aplicativo não abre, o que faço?",
+                "Tente reinstalar o aplicativo ou verificar atualizações disponíveis.",
+            ),
             ("Como reporto um bug?", "Envie os detalhes do problema pelo formulário de contato do suporte."),
             ("O site está fora do ar?", "Verifique nossa página de status para atualizações sobre disponibilidade."),
             ("Como falo com um atendente humano?", "Use o botão de contato no rodapé do site para abrir um chamado."),
