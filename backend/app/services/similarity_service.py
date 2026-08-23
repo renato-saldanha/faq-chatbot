@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from rapidfuzz import fuzz
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.config import get_settings
 from app.models import FaqItem
@@ -52,7 +53,7 @@ class FuzzySimilarityService(SimilarityService):
             return None
 
         result = await session.execute(
-            select(FaqItem).where(FaqItem.ativo.is_(True)).join(FaqItem.categoria)
+            select(FaqItem).where(FaqItem.ativo.is_(True)).options(selectinload(FaqItem.categoria))
         )
         itens = result.scalars().all()
         if not itens:
