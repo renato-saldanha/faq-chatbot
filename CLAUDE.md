@@ -15,7 +15,7 @@ Requisitos completos: `docs/PRD.md`. Passo a passo de implementação: `docs/PLA
 ## Arquitetura
 
 ```
-Chat público  → POST /api/chat/ask        → ChatService → SimilarityService (fuzzy) → FaqItem
+Chat público  → POST /api/chat/ask        → ChatService → SimilarityService (fuzzy|embedding|hybrid) → FaqItem
 Admin (login) → GET/POST/PUT/DELETE /api/faq/*, /api/metrics/*  → require_admin_session (cookie JWT)
 ```
 
@@ -63,7 +63,7 @@ docker-compose.yml   # postgres (pgvector) + backend + frontend
 - **Pydantic vs dataclass:** `BaseModel` para I/O de API (request/response); `@dataclass(frozen=True)` para estrutura interna imutável entre camadas (`MatchResult`, `MetricsSummary`, `DailyCount`, etc — nunca vazam pro Pydantic de resposta diretamente, a rota faz a conversão explícita).
 - **Injeção de dependência sempre.** Nenhuma classe instancia sua própria dependência (`self.x = AlgumaCoisa()` proibido). Repository recebe `AsyncSession` via `__init__`; service recebe repository(s)/outros services via `__init__`; rota resolve tudo via `Depends()`. Exceções: primitivos stdlib sem estado (`datetime.now()`, `secrets.randbelow()`).
 - **Forward reference em `relationship()`:** usar `TYPE_CHECKING` + import real, nunca `# noqa: F821` sozinho — mypy precisa enxergar o tipo (ver `app/models/categoria.py`/`faq_item.py`).
-- **`SimilarityService` é a única fronteira de "quão parecida é uma pergunta".** Nenhum código fora de `services/similarity_service.py` lê `embedding`/compara texto diretamente — tudo passa por `find_best_match`/`vector_for`. Isso existe para permitir trocar o backend (fuzzy → embedding, se um dia for implementado) sem tocar em `ChatService` nem em quem consome métricas.
+- **`SimilarityService` é a única fronteira de "quão parecida é uma pergunta".** Nenhum código fora de `services/similarity_service.py` lê `embedding`/compara texto diretamente — tudo passa por `find_best_match`/`vector_for`. Três implementações (`FuzzySimilarityService`, `EmbeddingSimilarityService`, `HybridSimilarityService`) selecionáveis via `SIMILARITY_BACKEND`, sem tocar em `ChatService` nem em quem consome métricas.
 - **Segredos:** `JWT_SECRET_KEY`, `SMTP_PASSWORD`, `OPENAI_API_KEY` só via `Settings`/env var — nunca hardcoded, nunca logados.
 - **Testes:** pytest + pytest-asyncio, `tests/` espelha `app/`. Repository testado com `AsyncMock`/`MagicMock` na sessão (sem Postgres real rodando) — assert no que foi chamado (`session.add`, `session.execute` com a query certa), não no resultado de uma query real. Um assert por conceito.
 
@@ -129,11 +129,11 @@ alembic upgrade head
 - **Se um build travar visivelmente sem progredir** (ex: `transferring context` crescendo devagar por mais de ~1 min), considerar `docker compose down` + corrigir a causa (geralmente `.dockerignore` ausente) + subir de novo, em vez de esperar — mais rápido sob prazo apertado do que deixar terminar.
 - **Rodar `docker compose up --build` em background (`run_in_background`)** e monitorar via `Monitor` com polling em `curl` nos health checks (`http://localhost:8000/health`, `http://localhost:3000`) — evita ficar bloqueado esperando o build inteiro para descobrir se algo quebrou.
 
-## Decisões de escopo (corte sob prazo — ver histórico de commits)
+## Decisões de escopo (ver histórico de commits)
 
-- **`SIMILARITY_BACKEND=fuzzy` único implementado.** PRD §5 previa 3 protótipos (fuzzy/embedding/híbrido) com script de avaliação comparativo — cortado por restrição de tempo. Schema já suporta `embedding` (coluna `pgvector` em `FaqItem`/`Interacao`), a interface `SimilarityService` já é abstrata o bastante para adicionar um segundo backend depois sem quebrar `ChatService`.
-- **CI/CD (GitHub Actions + gate de review por IA) foi configurado e depois desativado** sob a mesma restrição de tempo — branch protection removida, trabalho commitado direto na branch principal. Os workflows (`.github/workflows/`) continuam no repositório como referência, mas não estão ativos/obrigatórios.
-- **Sem testes E2E** (Playwright/Cypress) — fora do escopo dado o prazo; cobertura é unitária (backend) e ausente no momento (frontend, ver `PLANO_IMPLEMENTACAO.md` Parte 9, não priorizada).
+- **PRD §5 — 3 protótipos de similaridade (fuzzy/embedding/híbrido) implementados**, selecionáveis via `SIMILARITY_BACKEND`. Gabarito de avaliação (`scripts/similarity_eval_dataset.json` + `scripts/eval_similarity.py`) roda contra qualquer backend ativo — resultado documentado no README.
+- **CI/CD ativo** (`.github/workflows/ci.yml`) — lint/typecheck/test de backend e frontend + build do Docker Compose, em todo push/PR. Sem branch protection configurada, então o merge continua manual mesmo com gates rodando.
+- **Sem testes E2E automatizados em CI** (Playwright/Cypress) — cobertura é unitária (backend, 30 testes) e de componente (frontend, 29 testes via Vitest); smoke test manual via Playwright headless é usado ad-hoc em validação, não como suíte no CI.
 
 ## Documentação
 

@@ -6,7 +6,7 @@ Requisitos completos: `docs/PRD.md`. Plano de implementação original: `docs/PL
 
 ## Stack
 
-- **Backend:** Python 3.11+, FastAPI, SQLAlchemy 2.0 (async, `asyncpg`), Alembic, Pydantic v2, `rapidfuzz` (similaridade), `pgvector`, `python-jose` (JWT)
+- **Backend:** Python 3.11+, FastAPI, SQLAlchemy 2.0 (async, `asyncpg`), Alembic, Pydantic v2, `rapidfuzz` + `openai` (similaridade — 3 protótipos, ver decisão abaixo), `pgvector`, `python-jose` (JWT)
 - **Banco:** PostgreSQL 16 com extensão `pgvector`
 - **Frontend:** Next.js 14 (App Router), TypeScript, TanStack Query, Zustand, Recharts, Zod
 - **Auth do admin:** OTP por e-mail + JWT em cookie httpOnly — single-admin via `ADMIN_EMAIL`
@@ -57,38 +57,30 @@ Todas em `.env.example`:
 | Variável | Descrição |
 |---|---|
 | `DATABASE_URL` | String de conexão async do Postgres (já resolvida para o serviço `postgres` do Compose) |
-| `SIMILARITY_BACKEND` | Backend de similaridade ativo — `fuzzy` (único implementado, ver decisão abaixo) |
+| `SIMILARITY_BACKEND` | Backend de similaridade ativo — `fuzzy` \| `embedding` \| `hybrid` (ver decisão abaixo) |
 | `SIMILARITY_THRESHOLD` | Limiar mínimo de score (0–1) para considerar um match válido |
-| `OPENAI_API_KEY` / `OPENAI_MODEL` | Reservado para um backend de similaridade por embedding (não implementado — ver abaixo) |
+| `OPENAI_API_KEY` / `OPENAI_MODEL` | Necessário para os backends `embedding`/`hybrid` — chave da OpenAI, `OPENAI_MODEL=text-embedding-3-small` |
 | `ADMIN_EMAIL` | E-mail autorizado a logar no painel admin (single-admin, sem tabela de usuários) |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` | Envio do código OTP por e-mail; vazio = OTP cai no log do backend (ver acima) |
 | `JWT_SECRET_KEY` | Segredo de assinatura do JWT de sessão do admin — trocar em produção |
 
-## Decisão: similaridade por fuzzy matching
+## Decisão: comparação dos três protótipos de similaridade
 
-O PRD original (`docs/PRD.md` §5) previa comparar três protótipos — léxico/fuzzy, semântico via embedding OpenAI, e um híbrido — com um gabarito de perguntas e métricas de acurácia/latência antes de escolher o backend definitivo.
+O PRD original (`docs/PRD.md` §5) previa comparar três protótipos — léxico/fuzzy, semântico via embedding OpenAI, e um híbrido — com um gabarito de perguntas e métricas de acurácia/latência antes de escolher o backend definitivo. **Os três estão implementados**, selecionáveis via `SIMILARITY_BACKEND`:
 
-**O protótipo A (fuzzy, via `rapidfuzz`) foi o escolhido e implementado**; os protótipos B (embedding) e C (híbrido) ficaram fora do escopo desta entrega — decisão de escopo, não lacuna técnica.
+- **`fuzzy`** (Protótipo A) — `rapidfuzz`, léxico, sem custo/dependência de API externa.
+- **`embedding`** (Protótipo B) — embeddings da OpenAI (`text-embedding-3-small`), comparação por cosseno. Exige `OPENAI_API_KEY`.
+- **`hybrid`** (Protótipo C) — combina os dois scores (`score_final = α·score_embedding + (1-α)·score_trigram`).
 
-O gabarito de avaliação em si foi implementado (`scripts/similarity_eval_dataset.json`, 21 casos — 10 fáceis, 5 paráfrases, 5 com erro de digitação, 1 proposital sem match) e roda contra o backend ativo via `scripts/eval_similarity.py`:
+O gabarito de avaliação (`scripts/similarity_eval_dataset.json`, 21 casos — 10 fáceis, 5 paráfrases, 5 com erro de digitação, 1 proposital sem match) roda contra qualquer backend ativo via `scripts/eval_similarity.py`:
 
 ```bash
 docker compose exec backend python -m scripts.eval_similarity
 ```
 
-Resultado (tabela bruta em `docs/similarity_eval_output.txt`):
+**Regra de decisão** (PRD §5): vence o protótipo com maior acurácia; empate → menor latência média. Resultado dos três, com tabela bruta, e o protótipo vencedor: *em andamento — ver `docs/similarity_eval_output.txt` para o resultado mais recente disponível*.
 
-| Categoria | Acurácia | Casos |
-|---|---|---|
-| Caso fácil (texto próximo ao original) | 100.0% | 10/10 |
-| Paráfrase (vocabulário diferente) | 0.0% | 0/5 |
-| Erro de digitação | 100.0% | 5/5 |
-| Sem match (proposital) | 100.0% | 1/1 |
-| **Total** | **76.2%** | **16/21** |
-
-Latência média: ~2-3ms por consulta.
-
-O resultado confirma empiricamente o trade-off já esperado do fuzzy matching: cobre bem o caso mais comum do desafio (pergunta próxima ao texto da FAQ, com ou sem erro de digitação) — 100% de acerto e latência desprezível nesses dois grupos —, mas falha sistematicamente em paráfrase com vocabulário diferente ("como cancelo minha conta" vs "quero encerrar meu cadastro"), retornando sem-resposta em vez de um match forçado nesse caso. Esse é exatamente o cenário que o protótipo B (embedding semântico) resolveria — não implementado nesta entrega, mas o schema já suporta a extensão: `FaqItem` e `Interacao` têm coluna `embedding` (`pgvector`), e `SimilarityService` é a única fronteira de "quão parecida é uma pergunta" no código — nenhum outro módulo lê `embedding` ou compara texto diretamente. Adicionar um backend de embedding depois não deveria exigir tocar em `ChatService` nem em quem consome métricas.
+Schema já suportava a extensão desde a Parte 1: `FaqItem` e `Interacao` têm coluna `embedding` (`pgvector`), e `SimilarityService` é a única fronteira de "quão parecida é uma pergunta" no código — nenhum outro módulo lê `embedding` ou compara texto diretamente, o que permitiu adicionar os backends B/C sem tocar em `ChatService` nem em quem consome métricas.
 
 ## Estrutura do projeto
 
@@ -131,7 +123,7 @@ Detalhes de arquitetura e convenções de código: `CLAUDE.md` na raiz.
 
 - **Camadas em cadeia unidirecional:** `api/` (rota FastAPI) → `services/` (regra de negócio) → `repositories/` (acesso a dados) → `models/` (SQLAlchemy). Cada camada só conhece a de baixo — nenhuma rota acessa modelo direto, nenhum repository conhece service.
 - **Repository Pattern** (`app/repositories/`) — cada repository (`FaqRepository`, `InteracaoRepository`, `TimeseriesMetricsRepository`, `FaqMetricsRepository`) isola toda a query SQLAlchemy da tabela correspondente; services nunca montam `select(...)` diretamente.
-- **Strategy Pattern** (`app/services/similarity_service.py`) — `SimilarityService` é uma interface abstrata (`find_best_match`, `vector_for`); `FuzzySimilarityService` é a única implementação hoje, mas o `ChatService` e o restante do código dependem só da interface, nunca da classe concreta — trocar o backend de similaridade (ex: por embedding) não exige tocar em quem consome.
+- **Strategy Pattern** (`app/services/similarity_service.py`) — `SimilarityService` é uma interface abstrata (`find_best_match`, `vector_for`) com três implementações (`FuzzySimilarityService`, `EmbeddingSimilarityService`, `HybridSimilarityService`, selecionadas via `SIMILARITY_BACKEND`); o `ChatService` e o restante do código dependem só da interface, nunca da classe concreta.
 - **Dependency Injection via constructor + FastAPI `Depends()`:** nenhuma classe instancia sua própria dependência (`self.x = AlgumaCoisa()` é proibido pela convenção do projeto). Repository recebe `AsyncSession` no `__init__`; service recebe repository(s)/outros services no `__init__`; a rota resolve a árvore inteira via `Depends(get_chat_service)` (ver `app/api/chat.py`). Isso é o que torna os services testáveis com fakes, sem subir Postgres real nos testes.
 - **DTO explícito entre camadas:** `MatchResult`, `ChatResponse`, `MetricsSummary` são `@dataclass(frozen=True)` — estruturas imutáveis internas que nunca vazam para o Pydantic de resposta HTTP sem conversão explícita na rota. Pydantic (`BaseModel`) fica reservado para I/O de API (validação de request/response).
 
@@ -160,7 +152,6 @@ npm run test          # 29 passed
 
 ## Fora do escopo desta entrega (decisões conscientes)
 
-- **`SIMILARITY_BACKEND=fuzzy` único** — ver seção de decisão acima.
-- **Sem testes E2E** (Playwright/Cypress).
+- **Sem testes E2E** (Playwright/Cypress) como suíte automatizada em CI.
 
 CI/CD ativo em `.github/workflows/ci.yml` (GitHub Actions) — lint, typecheck e testes de backend e frontend, mais build do Docker Compose, em todo push/PR na `master`. Sem branch protection configurada, então nada bloqueia merge automaticamente hoje — os gates rodam e reportam, mas o merge continua manual.
