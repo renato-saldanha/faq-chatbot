@@ -1,26 +1,32 @@
+Gabarito de avaliação de similaridade (docs/PRD.md §5) — 21 casos (10 fáceis, 5 paráfrase, 5 typo, 1 sem-match).
+Rodado via `docker compose exec backend python -m scripts.eval_similarity`, contra os 3 backends reais.
+
+==================================================================
+BACKEND: fuzzy (rapidfuzz, léxico)
+==================================================================
 Tipo         Acerto  Score   Latência   Pergunta
 ------------------------------------------------------------------------------------------
-caso_facil   OK      1.00      12.79ms  Como eu cadastro uma conta nova?
-caso_facil   OK      1.00       2.09ms  Como recupero minha senha?
-caso_facil   OK      1.00       1.99ms  Como cancelo minha conta?
-caso_facil   OK      1.00       1.98ms  Quais formas de pagamento são aceitas?
-caso_facil   OK      1.00       1.86ms  Como solicito reembolso?
-caso_facil   OK      1.00       2.00ms  O aplicativo não abre, o que faço?
-caso_facil   OK      1.00       1.93ms  Qual o prazo de entrega?
-caso_facil   OK      1.00       2.35ms  Como rastreio meu pedido?
-caso_facil   OK      1.00       1.99ms  O que está incluso no plano Premium?
-caso_facil   OK      1.00       1.89ms  Meus dados são compartilhados com terceiros?
-parafrase    FALHOU  0.66       1.90ms  Quero encerrar meu cadastro, como faço?
-parafrase    FALHOU  0.61       1.91ms  Esqueci minha senha, e agora?
-parafrase    FALHOU  -          1.96ms  Vocês aceitam boleto?
-parafrase    FALHOU  0.69       1.89ms  Quanto tempo demora pra chegar meu produto?
-parafrase    FALHOU  -          1.81ms  Quero falar com uma pessoa de verdade, não um
-typo         OK      0.76       1.88ms  Como recupero minha cenha?
-typo         OK      0.96       1.86ms  Qauis formas de pagameto são aceitas?
-typo         OK      0.92       1.92ms  Como cadastro uma conta noba?
-typo         OK      0.98       1.80ms  Qual o horario de atendimeto?
-typo         OK      0.96       1.95ms  Como rastrio meu pedid?
-sem_match    OK      -          1.85ms  Qual a previsão do tempo amanhã em Marte?
+caso_facil   OK      1.00      63.13ms  Como eu cadastro uma conta nova?
+caso_facil   OK      1.00       3.21ms  Como recupero minha senha?
+caso_facil   OK      1.00       3.07ms  Como cancelo minha conta?
+caso_facil   OK      1.00       7.02ms  Quais formas de pagamento são aceitas?
+caso_facil   OK      1.00       3.03ms  Como solicito reembolso?
+caso_facil   OK      1.00       4.67ms  O aplicativo não abre, o que faço?
+caso_facil   OK      1.00       2.88ms  Qual o prazo de entrega?
+caso_facil   OK      1.00       4.76ms  Como rastreio meu pedido?
+caso_facil   OK      1.00       4.41ms  O que está incluso no plano Premium?
+caso_facil   OK      1.00       3.04ms  Meus dados são compartilhados com terceiros?
+parafrase    FALHOU  0.66       2.94ms  Quero encerrar meu cadastro, como faço?
+parafrase    FALHOU  0.61       4.43ms  Esqueci minha senha, e agora?
+parafrase    FALHOU  -          4.68ms  Vocês aceitam boleto?
+parafrase    FALHOU  0.69       2.81ms  Quanto tempo demora pra chegar meu produto?
+parafrase    FALHOU  -          2.81ms  Quero falar com uma pessoa de verdade, não um
+typo         OK      0.76       2.88ms  Como recupero minha cenha?
+typo         OK      0.96       5.18ms  Qauis formas de pagameto são aceitas?
+typo         OK      0.92       3.67ms  Como cadastro uma conta noba?
+typo         OK      0.98       3.01ms  Qual o horario de atendimeto?
+typo         OK      0.96       2.81ms  Como rastrio meu pedid?
+sem_match    OK      -         12.93ms  Qual a previsão do tempo amanhã em Marte?
 
 Categoria       Acurácia     Casos
 ----------------------------------------
@@ -30,4 +36,100 @@ typo             100.0%      5/5
 sem_match        100.0%      1/1
 ----------------------------------------
 TOTAL             76.2%      16/21
-Latência média: 2.46ms
+Latência média: 7.02ms
+
+==================================================================
+BACKEND: embedding (OpenAI text-embedding-3-small, cosseno via pgvector)
+==================================================================
+Tipo         Acerto  Score   Latência   Pergunta
+------------------------------------------------------------------------------------------
+caso_facil   OK      1.00   18232.35ms  Como eu cadastro uma conta nova?   (cache-miss: 1º cálculo dos 50 embeddings do seed)
+caso_facil   OK      1.00     272.27ms  Como recupero minha senha?
+caso_facil   OK      1.00     329.23ms  Como cancelo minha conta?
+caso_facil   OK      1.00     297.90ms  Quais formas de pagamento são aceitas?
+caso_facil   OK      1.00     349.80ms  Como solicito reembolso?
+caso_facil   OK      1.00     317.38ms  O aplicativo não abre, o que faço?
+caso_facil   OK      1.00     349.25ms  Qual o prazo de entrega?
+caso_facil   OK      1.00     285.18ms  Como rastreio meu pedido?
+caso_facil   OK      1.00     290.22ms  O que está incluso no plano Premium?
+caso_facil   OK      1.00     325.56ms  Meus dados são compartilhados com terceiros?
+parafrase    OK      0.70     271.14ms  Quero encerrar meu cadastro, como faço?
+parafrase    FALHOU  0.76     279.13ms  Esqueci minha senha, e agora?
+parafrase    OK      0.68     326.04ms  Vocês aceitam boleto?
+parafrase    OK      0.62     330.34ms  Quanto tempo demora pra chegar meu produto?
+parafrase    FALHOU  -        327.56ms  Quero falar com uma pessoa de verdade, não um
+typo         OK      0.70     283.17ms  Como recupero minha cenha?
+typo         OK      0.84     341.82ms  Qauis formas de pagameto são aceitas?
+typo         OK      0.79     291.16ms  Como cadastro uma conta noba?
+typo         OK      0.94     645.74ms  Qual o horario de atendimeto?
+typo         OK      0.73     272.97ms  Como rastrio meu pedid?
+sem_match    OK      -        358.33ms  Qual a previsão do tempo amanhã em Marte?
+
+Categoria       Acurácia     Casos
+----------------------------------------
+caso_facil       100.0%      10/10
+parafrase         60.0%      3/5
+typo             100.0%      5/5
+sem_match        100.0%      1/1
+----------------------------------------
+TOTAL             90.5%      19/21
+Latência média (excluindo cache-miss inicial): ~330ms
+
+==================================================================
+BACKEND: hybrid (score_final = 0.6 * embedding + 0.4 * fuzzy)
+==================================================================
+Tipo         Acerto  Score   Latência   Pergunta
+------------------------------------------------------------------------------------------
+caso_facil   OK      1.00     738.97ms  Como eu cadastro uma conta nova?
+caso_facil   OK      1.00     336.06ms  Como recupero minha senha?
+caso_facil   OK      1.00     315.58ms  Como cancelo minha conta?
+caso_facil   OK      1.00     384.14ms  Quais formas de pagamento são aceitas?
+caso_facil   OK      1.00     378.47ms  Como solicito reembolso?
+caso_facil   OK      1.00     333.21ms  O aplicativo não abre, o que faço?
+caso_facil   OK      1.00     340.04ms  Qual o prazo de entrega?
+caso_facil   OK      1.00     377.83ms  Como rastreio meu pedido?
+caso_facil   OK      1.00     305.37ms  O que está incluso no plano Premium?
+caso_facil   OK      1.00     307.94ms  Meus dados são compartilhados com terceiros?
+parafrase    FALHOU  0.65     759.19ms  Quero encerrar meu cadastro, como faço?
+parafrase    OK      0.63     363.14ms  Esqueci minha senha, e agora?
+parafrase    FALHOU  -        371.21ms  Vocês aceitam boleto?
+parafrase    FALHOU  -        323.55ms  Quanto tempo demora pra chegar meu produto?
+parafrase    FALHOU  -        305.30ms  Quero falar com uma pessoa de verdade, não um
+typo         OK      0.73     355.54ms  Como recupero minha cenha?
+typo         OK      0.89     379.03ms  Qauis formas de pagameto são aceitas?
+typo         OK      0.84     294.56ms  Como cadastro uma conta noba?
+typo         OK      0.96     334.48ms  Qual o horario de atendimeto?
+typo         OK      0.82     302.87ms  Como rastrio meu pedid?
+sem_match    OK      -        354.68ms  Qual a previsão do tempo amanhã em Marte?
+
+Categoria       Acurácia     Casos
+----------------------------------------
+caso_facil       100.0%      10/10
+parafrase         20.0%      1/5
+typo             100.0%      5/5
+sem_match        100.0%      1/1
+----------------------------------------
+TOTAL             81.0%      17/21
+Latência média: 379.10ms
+
+==================================================================
+RESULTADO FINAL — regra de decisão do PRD §5 (maior acurácia; empate → menor latência)
+==================================================================
+
+| Backend    | Acurácia total | Latência média |
+|------------|-----------------|-----------------|
+| fuzzy      | 76.2% (16/21)   | ~7ms            |
+| embedding  | 90.5% (19/21)   | ~330ms          |
+| hybrid     | 81.0% (17/21)   | ~380ms          |
+
+Vencedor: embedding (maior acurácia, sem empate).
+
+Nota sobre o híbrido: com ALPHA=0.6 (peso maior pro embedding), o hybrid ficou
+ABAIXO do embedding puro (81.0% vs 90.5%) — o termo fuzzy (0.4) puxou o score
+final pra baixo em paráfrases onde o léxico diverge bastante mas o significado é
+o mesmo (ex.: "Vocês aceitam boleto?" tem score_fuzzy baixo apesar do
+score_embedding alto), derrubando score_final abaixo do threshold em casos que o
+embedding isolado acertava. Isso é evidência de que, pra esta base (perguntas
+curtas, domínio fechado de FAQ), a mistura com léxico não ajuda — o sinal
+semântico já é suficiente e o fuzzy introduz ruído nos casos de paráfrase, que são
+exatamente os que o embedding foi desenhado pra resolver.
