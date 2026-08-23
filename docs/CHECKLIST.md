@@ -2,7 +2,7 @@
 
 Estado real do projeto contra as 12 Partes do `PLANO_IMPLEMENTACAO.md`, cruzado com commits, testes e o smoke test manual desta sessão — não com relatório de sessão anterior.
 
-**Status atual:** 11/12 partes completas (Parte 2 parcial — protótipo A + gabarito de avaliação; B/C fora do escopo).
+**Status atual:** 11/12 partes completas. Parte 2 em andamento — implementando os 3 protótipos (fuzzy/embedding/híbrido) conforme PRD §5.
 
 ## Feito e validado
 
@@ -32,9 +32,16 @@ Estado real do projeto contra as 12 Partes do `PLANO_IMPLEMENTACAO.md`, cruzado 
 
 - [x] **Parte 11 — Documentação e entrega.** `README.md` com setup, env vars, decisão de similaridade, estrutura. Commits organizados por unidade lógica, enviados ao GitHub. `/code-review high` rodado sobre o diff inicial — sem achados.
 
-- [x] **Parte 2 — Protótipos de similaridade (parcial).** Protótipo A (fuzzy, `rapidfuzz`) implementado e em produção. Gabarito de avaliação implementado (`scripts/eval_similarity.py` + `similarity_eval_dataset.json`, 21 casos) e rodado contra o backend real: 100% em casos fáceis e typos, 0% em paráfrases, ~2-3ms de latência média — resultado documentado no README com tabela bruta. Protótipos B (embedding) e C (híbrido) não implementados. Schema já suporta `embedding` via `pgvector` — extensível sem tocar em `ChatService`.
-
 - [x] **CI/CD.** `ci.yml` reativado (estava quebrado — usava pnpm, projeto usa npm) e validado com run real do GitHub Actions passando (backend + frontend + docker-build). Gate de review por IA (`pr-review.yml`) removido — não fazia parte do escopo pedido.
+
+## Em andamento
+
+- [ ] **Parte 2 — Protótipos de similaridade (implementação completa dos 3, PRD §5).**
+  - [x] Protótipo A (fuzzy, `rapidfuzz`) — já implementado e em produção.
+  - [x] Gabarito de avaliação (`scripts/eval_similarity.py` + `similarity_eval_dataset.json`, 21 casos).
+  - [ ] Protótipo B (embedding OpenAI, `text-embedding-3-small`) — depende de `OPENAI_API_KEY` real.
+  - [ ] Protótipo C (híbrido — combina scores de A e B).
+  - [ ] Rodar o gabarito contra os 3, aplicar a regra de decisão (maior acurácia, empate → menor latência), documentar resultado + protótipo vencedor no README.
 
 ## Fora do escopo desta entrega (decisão consciente)
 
@@ -42,8 +49,5 @@ Estado real do projeto contra as 12 Partes do `PLANO_IMPLEMENTACAO.md`, cruzado 
 
 ## Pendente
 
-Nenhuma parte pendente — só a checagem final abaixo.
-
-## Se sobrar tempo, nesta ordem
-
-1. **Checklist final do PRD §4** — conferir cada critério de avaliação verbatim do enunciado antes de considerar encerrado.
+- Concluir a implementação dos 3 protótipos de similaridade (ver "Em andamento" acima).
+- Checklist final do PRD §4 — conferir cada critério de avaliação verbatim do enunciado antes de considerar encerrado.
