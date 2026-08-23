@@ -72,13 +72,21 @@ O PRD original (`docs/PRD.md` §5) previa comparar três protótipos — léxico
 - **`embedding`** (Protótipo B) — embeddings da OpenAI (`text-embedding-3-small`), comparação por cosseno. Exige `OPENAI_API_KEY`.
 - **`hybrid`** (Protótipo C) — combina os dois scores (`score_final = α·score_embedding + (1-α)·score_trigram`).
 
-O gabarito de avaliação (`scripts/similarity_eval_dataset.json`, 21 casos — 10 fáceis, 5 paráfrases, 5 com erro de digitação, 1 proposital sem match) roda contra qualquer backend ativo via `scripts/eval_similarity.py`:
+O gabarito de avaliação (`scripts/similarity_eval_dataset.json`, 21 casos — 10 fáceis, 5 paráfrases, 5 com erro de digitação, 1 proposital sem match) roda contra o backend ativo (lido de `SIMILARITY_BACKEND`) via `scripts/eval_similarity.py`:
 
 ```bash
 docker compose exec backend python -m scripts.eval_similarity
 ```
 
-**Regra de decisão** (PRD §5): vence o protótipo com maior acurácia; empate → menor latência média. Resultado dos três, com tabela bruta, e o protótipo vencedor: *em andamento — ver `docs/similarity_eval_output.txt` para o resultado mais recente disponível*.
+**Regra de decisão** (PRD §5): vence o protótipo com maior acurácia; empate → menor latência média. Resultado bruto de cada rodada: `docs/similarity_eval_output.txt`.
+
+| Backend | Acurácia total | Paráfrase | Latência média |
+|---|---|---|---|
+| `fuzzy` | 76.2% (16/21) | 0% (0/5) | ~7ms |
+| **`embedding`** | **90.5% (19/21)** | 60% (3/5) | ~330ms |
+| `hybrid` (α=0.6) | 81.0% (17/21) | 20% (1/5) | ~380ms |
+
+**Vencedor: `embedding`** — maior acurácia, sem empate. `fuzzy` só acerta paráfrase por acaso (score de coincidência lexical, não de significado); `embedding` resolve exatamente a categoria que o `fuzzy` não consegue. O híbrido (α=0.6) ficou *abaixo* do embedding puro: o termo fuzzy (peso 0.4) derruba o score final em paráfrases onde a semântica bate mas o léxico diverge — nesta base (perguntas curtas, domínio fechado de FAQ), misturar com léxico introduz ruído em vez de ajudar. Recomendado usar `SIMILARITY_BACKEND=embedding` no `.env` real (requer `OPENAI_API_KEY`); `.env.example` mantém `fuzzy` como padrão para não exigir a chave só para subir a stack pela primeira vez.
 
 Schema já suportava a extensão desde a Parte 1: `FaqItem` e `Interacao` têm coluna `embedding` (`pgvector`), e `SimilarityService` é a única fronteira de "quão parecida é uma pergunta" no código — nenhum outro módulo lê `embedding` ou compara texto diretamente, o que permitiu adicionar os backends B/C sem tocar em `ChatService` nem em quem consome métricas.
 
@@ -98,7 +106,7 @@ backend/
 ├── alembic/                     # Migrations (extensão pgvector + 3 tabelas)
 ├── scripts/seed_faq.py           # Seed idempotente, rodado automaticamente no boot
 ├── scripts/eval_similarity.py    # Gabarito de similaridade — ver "Decisão" acima
-├── tests/                        # 30 testes, espelha app/, sem depender de Postgres real
+├── tests/                        # 39 testes, espelha app/, sem depender de Postgres real
 └── Dockerfile
 
 frontend/
@@ -140,7 +148,7 @@ Detalhes de arquitetura e convenções de código: `CLAUDE.md` na raiz.
 ```bash
 # Backend
 cd backend
-pytest tests/ -v          # 30 passed
+pytest tests/ -v          # 39 passed
 ruff check . && mypy app/  # ambos limpos
 
 # Frontend

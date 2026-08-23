@@ -2,7 +2,7 @@
 
 Estado real do projeto contra as 12 Partes do `PLANO_IMPLEMENTACAO.md`, cruzado com commits, testes e o smoke test manual desta sessão — não com relatório de sessão anterior.
 
-**Status atual:** 11/12 partes completas. Parte 2 em andamento — implementando os 3 protótipos (fuzzy/embedding/híbrido) conforme PRD §5.
+**Status atual:** 12/12 partes completas.
 
 ## Feito e validado
 
@@ -34,14 +34,8 @@ Estado real do projeto contra as 12 Partes do `PLANO_IMPLEMENTACAO.md`, cruzado 
 
 - [x] **CI/CD.** `ci.yml` reativado (estava quebrado — usava pnpm, projeto usa npm) e validado com run real do GitHub Actions passando (backend + frontend + docker-build). Gate de review por IA (`pr-review.yml`) removido — não fazia parte do escopo pedido.
 
-## Em andamento
-
-- [ ] **Parte 2 — Protótipos de similaridade (implementação completa dos 3, PRD §5).**
-  - [x] Protótipo A (fuzzy, `rapidfuzz`) — já implementado e em produção.
-  - [x] Gabarito de avaliação (`scripts/eval_similarity.py` + `similarity_eval_dataset.json`, 21 casos).
-  - [ ] Protótipo B (embedding OpenAI, `text-embedding-3-small`) — depende de `OPENAI_API_KEY` real.
-  - [ ] Protótipo C (híbrido — combina scores de A e B).
-  - [ ] Rodar o gabarito contra os 3, aplicar a regra de decisão (maior acurácia, empate → menor latência), documentar resultado + protótipo vencedor no README.
+- [x] **Parte 2 — Protótipos de similaridade (implementação completa dos 3, PRD §5).** `FuzzySimilarityService`, `EmbeddingSimilarityService` e `HybridSimilarityService` implementados atrás da mesma interface `SimilarityService`, selecionáveis via `SIMILARITY_BACKEND`. Gabarito (`scripts/eval_similarity.py`, 21 casos) rodado contra os 3 backends reais (API OpenAI real): fuzzy 76.2%, **embedding 90.5% (vencedor)**, hybrid 81.0%. Resultado bruto em `docs/similarity_eval_output.txt`, tabela e decisão no `README.md`.
+  - *Bug real corrigido nesta etapa:* `HybridSimilarityService.find_best_match` fazia `if item.embedding` para checar presença de embedding — `item.embedding` é `numpy.ndarray` (via pgvector), e `bool()` de array multi-elemento levanta `ValueError`. Só apareceu ao rodar contra o Postgres real (mock de teste usava `list`, que mascarava o bug). Corrigido para `is not None`; teste de regressão adicionado usando `numpy.array` para reproduzir o tipo real.
 
 ## Fora do escopo desta entrega (decisão consciente)
 
@@ -49,5 +43,4 @@ Estado real do projeto contra as 12 Partes do `PLANO_IMPLEMENTACAO.md`, cruzado 
 
 ## Pendente
 
-- Concluir a implementação dos 3 protótipos de similaridade (ver "Em andamento" acima).
 - Checklist final do PRD §4 — conferir cada critério de avaliação verbatim do enunciado antes de considerar encerrado.
