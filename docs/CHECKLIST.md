@@ -43,10 +43,11 @@ Estado real do projeto contra as 12 Partes do `PLANO_IMPLEMENTACAO.md`, cruzado 
   - *Também corrigido:* exception handler global no FastAPI (`app/main.py`) — antes, qualquer erro não previsto (fora do que já tinha `HTTPException` específica) caía no 500 cru do Starlette sem log nem formato de resposta consistente.
   - 8 testes novos (repository + handler global), suíte total 47/47 verde, gabarito de similaridade revalidado em 100% (21/21) após a refatoração.
 
+- [x] **Testes de rota HTTP** (`test_chat.py`, `test_faq.py`, `test_metrics.py`, `test_auth.py`) — a lacuna de cobertura identificada na auditoria de estrutura (só services/repositories eram testados, nenhuma rota `api/*.py` diretamente). 24 testes via `TestClient` + `app.dependency_overrides`, cobrindo status code, serialização de resposta, 401 sem sessão nas rotas protegidas, 404/422 e o cookie httpOnly do login. Suíte total: 71/71.
+
 ## Fora do escopo desta entrega (decisão consciente)
 
 - [~] **Testes E2E.** Playwright rodado ad-hoc nesta sessão para smoke tests manuais, não integrado como suíte automatizada em CI.
-- [~] **Testes de rota HTTP dedicados** (`test_faq.py`/`test_metrics.py`/`test_chat.py` cobrindo status code/serialização/auth via `TestClient`) — hoje só services/repositories são testados diretamente; risco baixo dado o tamanho do projeto, mas é a lacuna de cobertura mais visível identificada na auditoria de estrutura.
 
 ## Pendente
 
