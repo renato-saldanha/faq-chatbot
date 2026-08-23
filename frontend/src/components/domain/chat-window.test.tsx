@@ -44,7 +44,20 @@ describe("ChatWindow", () => {
   it("mostra o estado vazio inicial", () => {
     renderChatWindow();
 
-    expect(screen.getByText("Faça uma pergunta para começar.")).toBeInTheDocument();
+    expect(screen.getByText(/Faça uma pergunta para começar/)).toBeInTheDocument();
+  });
+
+  it("clicar numa sugestão envia a pergunta correspondente", async () => {
+    mockedApi.post.mockResolvedValueOnce(fakeResponse());
+    const user = userEvent.setup();
+    renderChatWindow();
+
+    await user.click(screen.getByRole("button", { name: "Como recupero minha senha?" }));
+
+    expect(screen.getByText("Como recupero minha senha?")).toBeInTheDocument();
+    expect(mockedApi.post).toHaveBeenCalledWith("/api/chat/ask", {
+      pergunta: "Como recupero minha senha?",
+    });
   });
 
   it("envia a pergunta digitada e chama api.post com o payload correto", async () => {
@@ -98,16 +111,19 @@ describe("ChatWindow", () => {
     expect(screen.getByText("Não encontrei uma resposta para isso.")).toBeInTheDocument();
   });
 
-  it("chama toast.error e não quebra quando a API falha", async () => {
+  it("chama toast.error, marca a pergunta como falha e não quebra quando a API falha", async () => {
     mockedApi.post.mockRejectedValueOnce(new Error("Erro 500: falha interna"));
 
     renderChatWindow();
     await askQuestion("Pergunta que vai falhar");
 
     await waitFor(() => {
-      expect(mockedToastError).toHaveBeenCalledWith("Erro ao enviar sua pergunta. Tente novamente.");
+      expect(mockedToastError).toHaveBeenCalledWith(
+        "Não foi possível enviar sua pergunta. Toque em Enviar para tentar de novo.",
+      );
     });
     expect(screen.getByText("Pergunta que vai falhar")).toBeInTheDocument();
+    expect(screen.getByText("Não foi possível enviar")).toBeInTheDocument();
   });
 
   it("desabilita input e botão enquanto o envio está pendente", async () => {
