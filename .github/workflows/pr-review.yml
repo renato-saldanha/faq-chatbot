@@ -9,7 +9,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: read
   id-token: write
 
@@ -100,6 +100,39 @@ jobs:
             echo ""
             echo "$FULL_TEXT"
           } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit review log
+        if: always() && steps.extract.outcome == 'success'
+        env:
+          FULL_TEXT: ${{ steps.extract.outputs.FULL_TEXT }}
+          VERDICT: ${{ steps.extract.outputs.VERDICT }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          mkdir -p docs/reviews
+          LOG_FILE="docs/reviews/pr-${PR_NUMBER}.md"
+          {
+            echo "# Review automatizado — PR #${PR_NUMBER}"
+            echo ""
+            echo "**Título:** ${PR_TITLE}"
+            echo "**Commit avaliado:** ${COMMIT_SHA}"
+            echo "**Veredicto:** ${VERDICT}"
+            echo ""
+            echo "---"
+            echo ""
+            echo "$FULL_TEXT"
+          } > "$LOG_FILE"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$LOG_FILE"
+          if git diff --cached --quiet; then
+            echo "Log sem mudança em relação ao commit anterior, nada a commitar."
+            exit 0
+          fi
+          git commit -m "chore(review): registra resultado do review automatizado — PR #${PR_NUMBER}"
+          git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
 
       - name: Fail on showstoppers
         env:
