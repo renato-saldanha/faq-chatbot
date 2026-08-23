@@ -42,8 +42,6 @@ jobs:
             exatamente as instruções abaixo (definição do agente pr-reviewer deste projeto):
 
             ${{ steps.agent_prompt.outputs.AGENT_INSTRUCTIONS }}
-          claude_args: >-
-            --allowedTools "Read" "Grep" "Glob" "Bash(git *)" "Bash(ls *)" "Bash(find *)"
 
       - name: Extract verdict from execution log
         id: extract
