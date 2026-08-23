@@ -41,6 +41,15 @@ docker compose logs -f backend
 
 Procure pela linha `SMTP não configurado — OTP para <email>: <código>` (ver `AuthService._send_email`). Para enviar e-mails reais, preencha `SMTP_HOST`/`SMTP_USER`/`SMTP_PASSWORD` no `.env`.
 
+### Smoke test manual
+
+A base fictícia (`scripts/seed_faq.py`) já popula 15 perguntas em 3 categorias no primeiro boot — não é preciso cadastrar nada manualmente para testar o fluxo completo:
+
+1. Suba a stack (`docker compose up --build`) e abra http://localhost:3000 — o chat já responde perguntas do seed (ex: "Como recupero minha senha?") e trata pergunta sem match retornando `sem_resposta: true`.
+2. Clique em "Painel interno" (canto superior direito do chat) → login com o `ADMIN_EMAIL` configurado → código OTP (log do backend ou e-mail real, conforme SMTP) → cai no dashboard de métricas, já populado pelas interações do passo 1.
+3. Em "FAQ", teste o CRUD: criar uma pergunta nova, verificar que ela já aparece na lista e responde no chat sem precisar reiniciar nada; editar e excluir também refletem imediatamente.
+4. Para repetir o teste do zero (base limpa, sem histórico de interações): `docker compose down -v && docker compose up --build` — a migration (`alembic upgrade head`) recria o schema e o seed repovoa a base fictícia automaticamente, sem passo manual algum.
+
 ## Variáveis de ambiente
 
 Todas em `.env.example`:
