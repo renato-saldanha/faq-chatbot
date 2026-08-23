@@ -1,10 +1,19 @@
 from unittest.mock import AsyncMock
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.api.chat import get_chat_service
 from app.main import app
+from app.rate_limit import limiter
 from app.services.chat_service import ChatResponse
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter():
+    limiter.reset()
+    yield
+    limiter.reset()
 
 
 def _override_chat_service(response: ChatResponse) -> AsyncMock:
@@ -71,3 +80,19 @@ def test_ask_sem_campo_pergunta_retorna_422() -> None:
     response = client.post("/api/chat/ask", json={})
 
     assert response.status_code == 422
+
+
+def test_ask_acima_do_limite_retorna_429() -> None:
+    _override_chat_service(ChatResponse(resposta="ok", faq_item_id=1, categoria="Conta", sem_resposta=False, score=0.9))
+    try:
+        client = TestClient(app)
+        for _ in range(10):
+            response = client.post("/api/chat/ask", json={"pergunta": "Como cadastro uma conta?"})
+            assert response.status_code == 200
+
+        response = client.post("/api/chat/ask", json={"pergunta": "Como cadastro uma conta?"})
+
+        assert response.status_code == 429
+        assert response.json() == {"detail": "Muitas requisições. Tente novamente em instantes."}
+    finally:
+        app.dependency_overrides.clear()

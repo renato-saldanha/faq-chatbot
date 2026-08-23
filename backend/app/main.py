@@ -3,12 +3,18 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.api import auth, chat, faq, metrics
+from app.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Chatbot de FAQ com Dashboard Analítico")
+
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -22,6 +28,11 @@ app.include_router(chat.router)
 app.include_router(faq.router)
 app.include_router(metrics.router)
 app.include_router(auth.router)
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    return JSONResponse(status_code=429, content={"detail": "Muitas requisições. Tente novamente em instantes."})
 
 
 @app.exception_handler(Exception)

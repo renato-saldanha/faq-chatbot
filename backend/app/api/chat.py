@@ -1,13 +1,14 @@
 from functools import lru_cache
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from openai import AsyncOpenAI
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api._deps import get_faq_repository
 from app.config import get_settings
 from app.db import get_db_session
+from app.rate_limit import limiter
 from app.repositories.faq_repository import FaqRepository
 from app.repositories.interacao_repository import InteracaoRepository
 from app.services.chat_service import ChatResponse, ChatService
@@ -37,7 +38,7 @@ def get_similarity_service() -> SimilarityService:
 
 
 class ChatAskRequest(BaseModel):
-    pergunta: str
+    pergunta: str = Field(max_length=1000)
 
     @field_validator("pergunta")
     @classmethod
@@ -61,5 +62,8 @@ def get_chat_service(
 
 
 @router.post("/ask", response_model=ChatResponse)
-async def ask(request: ChatAskRequest, chat_service: ChatService = Depends(get_chat_service)) -> ChatResponse:
-    return await chat_service.ask(request.pergunta)
+@limiter.limit("10/minute")
+async def ask(
+    request: Request, body: ChatAskRequest, chat_service: ChatService = Depends(get_chat_service)
+) -> ChatResponse:
+    return await chat_service.ask(body.pergunta)
