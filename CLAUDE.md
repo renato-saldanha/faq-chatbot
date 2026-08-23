@@ -109,6 +109,12 @@ alembic revision --autogenerate -m "descrição"
 alembic upgrade head
 ```
 
+## Regras de processo (violadas ao menos uma vez nesta sessão — não repetir)
+
+- **Nunca confiar no relatório de um subagent como prova de que o código existe/funciona.** Já aconteceu de um agente reportar "arquivo criado, X testes passando" com saída de `pytest` incluída, e o arquivo simplesmente não existir em disco — ou existir com nome de função diferente do relatado. Sempre confirmar com `ls`/`Read` o arquivo real e rodar o comando de teste/lint você mesmo antes de aceitar como concluído.
+- **Nunca dar `git add <diretório>` genérico esperando pegar só uma mudança.** Ele pega TODO o conteúdo pendente daquele diretório, incluindo trabalho de outra tarefa que só por acaso ainda não tinha sido commitado — resultado é um commit com mensagem sobre X que na verdade também inclui Y não relacionado. Sempre `git status --short` antes de `git add`, e usar `git add <arquivo específico>` quando a intenção é isolar uma mudança.
+- **Frontend/código gerado por agente em paralelo entra como "não verificado" até `npm install`/`build`/`typecheck` rodarem até o fim, sem erro, na sua própria execução.** Escrever o código não é o mesmo que validá-lo — principalmente quando `node_modules` local pode estar corrompido/parcial de uma tentativa anterior (limpar com `rm -rf node_modules` antes de reinstalar se a instalação falhar de forma estranha, tipo `ENOTEMPTY`/`EPERM`).
+
 ## Decisões de escopo (corte sob prazo — ver histórico de commits)
 
 - **`SIMILARITY_BACKEND=fuzzy` único implementado.** PRD §5 previa 3 protótipos (fuzzy/embedding/híbrido) com script de avaliação comparativo — cortado por restrição de tempo. Schema já suporta `embedding` (coluna `pgvector` em `FaqItem`/`Interacao`), a interface `SimilarityService` já é abstrata o bastante para adicionar um segundo backend depois sem quebrar `ChatService`.
