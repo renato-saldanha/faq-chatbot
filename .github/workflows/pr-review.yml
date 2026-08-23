@@ -1,0 +1,116 @@
+name: PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: pr-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  id-token: write
+
+jobs:
+  review:
+    name: automated review
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run reviewer agent
+        id: review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Revise o diff desta PR (base: origin/${{ github.event.pull_request.base.ref }}) seguindo
+            exatamente as instruções do agente pr-reviewer definido em .claude/agents/pr-reviewer.md.
+          claude_args: |
+            {
+              "agent": "./.claude/agents/pr-reviewer.md",
+              "json-schema": {
+                "type": "object",
+                "required": ["verdict", "showstoppers", "concerns", "highlights"],
+                "properties": {
+                  "verdict": {"type": "string", "enum": ["SHIP_CLEAN", "SHIP", "FIX_AND_RESUBMIT"]},
+                  "showstoppers": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["file", "description", "reason"],
+                      "properties": {
+                        "file": {"type": "string"},
+                        "line": {"type": "integer"},
+                        "description": {"type": "string"},
+                        "reason": {"type": "string"}
+                      }
+                    }
+                  },
+                  "concerns": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["file", "description"],
+                      "properties": {
+                        "file": {"type": "string"},
+                        "line": {"type": "integer"},
+                        "description": {"type": "string"}
+                      }
+                    }
+                  },
+                  "highlights": {"type": "array", "items": {"type": "string"}}
+                }
+              }
+            }
+
+      - name: Validate agent output
+        id: validate
+        env:
+          RESULT: ${{ steps.review.outputs.structured_output }}
+        run: |
+          if [ -z "$RESULT" ] || ! echo "$RESULT" | jq -e 'has("verdict") and has("showstoppers")' > /dev/null 2>&1; then
+            echo "O agente de review não retornou saída estruturada válida — falha explícita, nunca aprova silenciosamente."
+            echo "Causa comum: primeiro PR introduzindo este workflow (a action recusa rodar até o arquivo estar mergeado na branch padrão) — nesse caso, mergear manualmente após revisão humana e o gate volta a funcionar nos PRs seguintes."
+            exit 1
+          fi
+          echo "RESULT<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$RESULT" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Post review summary
+        if: always() && steps.validate.outcome == 'success'
+        env:
+          RESULT: ${{ steps.validate.outputs.RESULT }}
+        run: |
+          VERDICT=$(echo "$RESULT" | jq -r '.verdict')
+          {
+            echo "## Review automatizado — veredicto: $VERDICT"
+            echo ""
+            echo "### Showstoppers"
+            echo "$RESULT" | jq -r '.showstoppers[] | "- `\(.file)`\(if .line then ":\(.line)" else "" end) — \(.description) — \(.reason)"'
+            echo "$RESULT" | jq -e '.showstoppers | length == 0' > /dev/null && echo "Nenhum."
+            echo ""
+            echo "### Concerns"
+            echo "$RESULT" | jq -r '.concerns[] | "- `\(.file)`\(if .line then ":\(.line)" else "" end) — \(.description)"'
+            echo "$RESULT" | jq -e '.concerns | length == 0' > /dev/null && echo "Nenhum."
+            echo ""
+            echo "### Highlights"
+            echo "$RESULT" | jq -r '.highlights[] | "- \(.)"'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail on showstoppers
+        env:
+          RESULT: ${{ steps.validate.outputs.RESULT }}
+        run: |
+          COUNT=$(echo "$RESULT" | jq '.showstoppers | length')
+          if [ "$COUNT" -gt 0 ]; then
+            echo "$COUNT showstopper(s) encontrado(s) — merge bloqueado até correção."
+            exit 1
+          fi
+          echo "Sem showstoppers — review aprovado."
