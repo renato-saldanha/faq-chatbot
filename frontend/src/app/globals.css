@@ -135,6 +135,36 @@ h2 {
   font-size: 15px;
 }
 
+.chat-empty p {
+  margin: 0 0 14px;
+}
+
+.chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.chat-suggestion-chip {
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--ink-soft);
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.chat-suggestion-chip:hover {
+  border-color: var(--primary);
+  color: var(--primary-dark);
+  background: var(--primary-tint);
+}
+
 .chat-bubble {
   max-width: 75%;
   padding: 11px 15px;
@@ -190,6 +220,14 @@ h2 {
   font-style: italic;
 }
 
+.chat-bubble-error {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fde3d3;
+}
+
 .chat-form {
   display: flex;
   gap: 8px;
@@ -234,20 +272,31 @@ h2 {
   cursor: not-allowed;
 }
 
-.chat-admin-link {
-  text-align: right;
-  margin-top: 14px;
-  font-size: 13px;
+.chat-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
-.chat-admin-link a {
-  color: var(--ink-faint);
+.chat-admin-button {
+  flex: none;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--ink-soft);
   text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
-.chat-admin-link a:hover {
-  color: var(--primary);
-  text-decoration: underline;
+.chat-admin-button:hover {
+  border-color: var(--primary);
+  color: var(--primary-dark);
+  background: var(--primary-tint);
 }
 
 /* Auth */
