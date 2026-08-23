@@ -17,7 +17,10 @@ SEED = [
             ),
             ("Como cancelo minha conta?", "Entre em contato pelo suporte para solicitar o encerramento do cadastro."),
             ("Posso mudar meu e-mail de cadastro?", "Sim, isso pode ser feito nas configurações da conta."),
-            ("Esqueci meu login, o que fazer?", "Use a opção 'Esqueci minha senha' informando o e-mail cadastrado."),
+            (
+                "Não lembro qual e-mail usei para me cadastrar, como descubro?",
+                "Entre em contato pelo suporte informando seu nome completo e telefone para localizarmos o cadastro.",
+            ),
             (
                 "Como altero minha senha atual?",
                 "Acesse configurações da conta, opção 'Segurança', e defina uma nova senha.",

@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://postgres:postgres@postgres:5432/faq_chatbot"
 
     similarity_backend: str = "fuzzy"
-    similarity_threshold: float = 0.6
+    similarity_threshold: float = 0.55
 
     openai_api_key: str = ""
     openai_model: str = "text-embedding-3-small"
