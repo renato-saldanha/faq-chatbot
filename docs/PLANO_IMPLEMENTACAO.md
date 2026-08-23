@@ -5,8 +5,9 @@ Referência: `PRD.md`. Cada parte é entregável e testável isoladamente antes 
 ## Parte 0 — Scaffolding e infraestrutura
 - Estrutura de pastas `backend/` e `frontend/` criadas do zero (`create-next-app` para o frontend, layout de pacote padrão para o backend FastAPI).
 - `docker-compose.yml`: serviço `postgres`, `backend` (FastAPI + uvicorn), `frontend` (Next.js).
-- `backend/config.py` via pydantic-settings: `DATABASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `SIMILARITY_BACKEND` (`fuzzy` | `embedding`), `SIMILARITY_THRESHOLD`.
+- `backend/config.py` via pydantic-settings: `DATABASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `SIMILARITY_BACKEND` (`fuzzy` | `embedding` | `hybrid`), `SIMILARITY_THRESHOLD`, `ADMIN_EMAIL`, `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASSWORD`, `JWT_SECRET_KEY`.
 - `.env.example` com todas as variáveis, sem valores reais.
+- Entrypoint do container `backend` roda `alembic upgrade head` seguido do seed idempotente (`scripts/seed_faq.py` — só popula se `faq_item` estiver vazia) antes de subir o `uvicorn`, para `docker compose up` deixar a aplicação usável sem passo manual (script real só existe a partir das Partes 1/2, mas o entrypoint já é escrito aqui para não virar retrabalho depois).
 - Portabilidade Windows/Mac/Ubuntu: imagens base multi-arquitetura (`python:3.11-slim`, `node:20-alpine`, `postgres:16`), sem paths absolutos do host nos volumes (`./backend:/app`), `.gitattributes` forçando `eol=lf` em `*.sh`/`Dockerfile`/scripts de entrypoint para não quebrar shebang por CRLF vindo do Windows.
 - Critério de saída: `docker compose up` sobe os 3 serviços, backend responde em `/health`, frontend carrega página em branco — validado localmente (Windows) e a validação cruzada em outro SO fica registrada no README como instrução, já que não há máquina Mac/Ubuntu disponível para testar diretamente neste ambiente.
 
@@ -25,9 +26,11 @@ Referência: `PRD.md`. Cada parte é entregável e testável isoladamente antes 
 - **Protótipo C (híbrido)**: combina os scores de A e B (`score_final = α·score_embedding + (1-α)·score_trigram`), com `α` calibrado no mesmo script de avaliação.
 - Normalização de texto (lowercase, remoção de acentuação/pontuação) antes de vetorizar, com cache de embedding por hash do texto normalizado.
 - Limiar adaptativo: aceitar o melhor candidato por margem relativa ao segundo colocado, além do `SIMILARITY_THRESHOLD` absoluto.
-- Script de avaliação (`scripts/eval_similarity.py`): roda ~20 perguntas de teste (paráfrases e typos incluídos) contra os três protótipos, imprime taxa de acerto e latência média.
-- Decisão registrada no README com a saída do script.
-- Critério de saída: script rodado, decisão tomada e documentada, protótipo vencedor plugado como implementação padrão de `SimilarityService` (interface permite trocar via `SIMILARITY_BACKEND` no `.env`, então nenhum código é descartado).
+- Gabarito fixo (`scripts/similarity_eval_dataset.json`): ~20 perguntas com `faq_item_id` esperado (`null` para as que devem cair em sem-resposta) — ~10 casos fáceis, ~5 paráfrases, ~5 com typos (composição detalhada no PRD §5).
+- Script de avaliação (`scripts/eval_similarity.py`): roda o gabarito contra os três protótipos, calcula acurácia (% de match correto) e latência média por consulta, imprime tabela comparativa.
+- Regra de decisão objetiva: vence maior acurácia; empate → menor latência. Sem julgamento subjetivo no momento de decidir.
+- Decisão registrada no README com a tabela bruta do script (não só a conclusão).
+- Critério de saída: script rodado, decisão tomada por essa regra e documentada, protótipo vencedor plugado como implementação padrão de `SimilarityService` (interface permite trocar via `SIMILARITY_BACKEND` no `.env`, então nenhum código é descartado).
 
 ## Parte 3 — Fluxo do chatbot (backend)
 - `InteracaoRepository`: `create` e `get_unanswered` (listagem filtrada por `sem_resposta=true`, usada na Parte 5 para D3).
@@ -50,26 +53,38 @@ Referência: `PRD.md`. Cada parte é entregável e testável isoladamente antes 
 - `api/metrics.py`: um endpoint por query acima, todos aceitando `date_from`/`date_to` como query params opcionais (sem RBAC — não é requisito do desafio).
 - Critério de saída: endpoints retornam dados corretos contra o seed da Parte 1 + interações geradas na Parte 3/4; `cluster_unanswered` testado com os três backends de similaridade (fuzzy, embedding, híbrido) para confirmar que D3 não depende de um específico.
 
-## Parte 6 — Dashboard (frontend)
+## Parte 6 — Autenticação do painel admin (backend + frontend)
+- Backend: `AuthService` (gera OTP 6 dígitos TTL 5min single-use, envia por e-mail via `smtplib`/SMTP, valida OTP, emite JWT), `auth/otp_store.py` (armazenamento em memória — TTLCache, sem tabela dedicada), `auth/jwt.py` (emissão/validação do cookie de sessão).
+- `api/auth.py`: `POST /api/auth/otp/request` (compara e-mail recebido com `ADMIN_EMAIL`; resposta genérica idêntica para "bate"/"não bate" — anti-enumeração; rate limit 3 tentativas/15min), `POST /api/auth/otp/verify` (valida OTP, seta cookie `httpOnly`/`secure`/`samesite=strict`).
+- Dependency `require_admin_session` (`Depends`) protegendo `/api/faq/*` e `/api/metrics/*` — aplicada retroativamente aos endpoints das Partes 1 e 5.
+- Frontend: `app/(auth)/login/page.tsx` (form de e-mail → form de OTP), `stores/auth-store.ts` (Zustand, estado de sessão), redirecionamento automático de `/dashboard/*` para `/login` quando sem sessão válida.
+- Critério de saída: tentar acessar `/faq` ou `/metricas` sem login redireciona para `/login`; fluxo completo de solicitar OTP (e-mail chega de verdade via SMTP configurado), verificar, e navegar autenticado até o CRUD.
+
+## Parte 7 — Dashboard (frontend)
 - `app/(dashboard)/metricas/page.tsx`: cards de KPI (D1, D3), gráfico de série temporal (D5, `timeseries-chart.tsx` em Recharts, linha), gráfico de categoria (D4, `category-breakdown-chart.tsx` em Recharts, barra/pizza), tabela de perguntas mais frequentes (D2, componente `SimpleTable` reutilizável), lista de perguntas sem resposta agrupada por tema (D3, clusters do `ClusteringService`).
 - Componente `DateInput` para filtro de período, reutilizado nas queries de métricas.
-- Critério de saída: dashboard reflete em tempo real as interações geradas via chat.
+- Critério de saída: dashboard reflete em tempo real as interações geradas via chat; inacessível sem sessão (Parte 6).
 
-## Parte 7 — Administração da base de conhecimento (frontend)
+## Parte 8 — Administração da base de conhecimento (frontend)
 - `app/(dashboard)/faq/page.tsx`: listagem, criação, edição, remoção de `FaqItem`/`Categoria` — necessário para o avaliador conseguir alimentar a base e testar o chatbot sem acesso direto ao banco.
 - Critério de saída: fluxo completo de cadastro de uma nova pergunta e verificação de que o chatbot passa a respondê-la.
 
-## Parte 8 — Polimento, erros e performance
+## Parte 9 — Testes de frontend
+- Vitest + Testing Library (já nas devDependencies do scaffold da Parte 0) cobrindo: `chat-window.tsx` (envio de pergunta, exibição de resposta, estado de "sem resposta"), `category-breakdown-chart.tsx`/`timeseries-chart.tsx` (renderiza com dados mock, não quebra com array vazio), `login-form`/`verify-form` (Parte 6 — submissão, erro de OTP inválido), `faq/page.tsx` (CRUD — criar, editar, excluir refletem na lista).
+- Sem essa Parte, `pnpm test` no CI (`ci.yml`) passa por ausência de teste, não por cobertura — objetivo aqui é o CI validar algo real antes da Parte 10.
+- Critério de saída: `pnpm test` roda com suíte não-vazia e cobre pelo menos os fluxos críticos acima; CI (`ci.yml`) reflete isso a partir deste ponto.
+
+## Parte 10 — Polimento, erros e performance
 - Tratamento de erro consistente (backend: exception handlers FastAPI → JSON padronizado; frontend: toasts/estados de erro em todas as queries/mutations via `sonner`).
 - Validação de input (Pydantic no backend, Zod no frontend — já nas dependências).
 - Paginação ou limite razoável nas listagens (FAQ admin, perguntas sem resposta) — volume aqui é pequeno, mas mostra boas práticas.
 - Responsividade (checklist manual em mobile/desktop).
 - Revisão de UX conforme `frontend-design`/`dataviz` skills antes de finalizar telas visuais.
 
-## Parte 9 — Documentação e entrega
-- `README.md`: contexto, stack, decisão de similaridade (com números do protótipo), como rodar (`docker compose up`), variáveis de ambiente, estrutura de pastas.
+## Parte 11 — Documentação e entrega
+- `README.md`: contexto, stack, decisão de similaridade (com a tabela bruta do protótipo, não só a conclusão — PRD §5), como rodar (`docker compose up`), variáveis de ambiente (incluindo `ADMIN_EMAIL`/SMTP/`JWT_SECRET_KEY`), estrutura de pastas, comportamento de bootstrap automático (migration + seed no primeiro boot, PRD §10) e como resetar o banco para testar o cadastro do zero.
 - Verificar todos os critérios de avaliação do PRD §4 como checklist final.
 - Repositório GitHub público (ou conforme instrução do processo seletivo), commits organizados por parte/feature.
 
 ## Ordem recomendada de execução
-0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9, com possibilidade de paralelizar 4 com 3 (frontend de chat com mock) e 6 com 5 (dashboard com mock) se quiser adiantar UI enquanto a API é fechada — mas dado que é solo, sequencial tende a ser mais previsível.
+0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11, com possibilidade de paralelizar 4 com 3 (frontend de chat com mock) e 7 com 5 (dashboard com mock) se quiser adiantar UI enquanto a API é fechada — mas dado que é solo, sequencial tende a ser mais previsível. Parte 6 (auth) precisa terminar antes de 7/8 ficarem "prontas de verdade" (a UI pode ser construída em paralelo, mas o gate de sessão é pré-requisito para considerar 7/8 completas).
