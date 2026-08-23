@@ -43,7 +43,7 @@ Procure pela linha `SMTP não configurado — OTP para <email>: <código>` (ver 
 
 ### Smoke test manual
 
-A base fictícia (`scripts/seed_faq.py`) já popula 15 perguntas em 3 categorias no primeiro boot — não é preciso cadastrar nada manualmente para testar o fluxo completo:
+A base fictícia (`scripts/seed_faq.py`) já popula 50 perguntas em 6 categorias no primeiro boot — não é preciso cadastrar nada manualmente para testar o fluxo completo:
 
 1. Suba a stack (`docker compose up --build`) e abra http://localhost:3000 — o chat já responde perguntas do seed (ex: "Como recupero minha senha?") e trata pergunta sem match retornando `sem_resposta: true`.
 2. Clique em "Painel interno" (canto superior direito do chat) → login com o `ADMIN_EMAIL` configurado → código OTP (log do backend ou e-mail real, conforme SMTP) → cai no dashboard de métricas, já populado pelas interações do passo 1.

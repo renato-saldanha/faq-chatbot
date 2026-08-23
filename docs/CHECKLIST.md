@@ -8,7 +8,7 @@ Estado real do projeto contra as 12 Partes do `PLANO_IMPLEMENTACAO.md`, cruzado 
 
 - [x] **Parte 0 — Scaffolding e infraestrutura.** Backend FastAPI + Frontend Next.js estruturados. `docker-compose.yml` com postgres + backend + frontend. Entrypoint roda migration + seed antes do uvicorn. `docker compose up --build` validado de ponta a ponta.
 
-- [x] **Parte 1 — Modelo de dados e base de conhecimento.** Models `Categoria`/`FaqItem`/`Interacao` + migration inicial. CRUD REST completo de FAQ, testado via UI real. Seed idempotente — 15 perguntas em 3 categorias.
+- [x] **Parte 1 — Modelo de dados e base de conhecimento.** Models `Categoria`/`FaqItem`/`Interacao` + migration inicial. CRUD REST completo de FAQ, testado via UI real. Seed idempotente — 50 perguntas em 6 categorias.
   - *Corrigido hoje:* FK de `interacao` sem `ondelete` bloqueava exclusão de qualquer FAQ já perguntada no chat.
 
 - [x] **Parte 3 — Fluxo do chatbot.** `ChatService.ask()` com match, fallback e gravação de interação. `POST /api/chat/ask` respondendo corretamente via smoke test. Pergunta sem match retorna `sem_resposta: true`.
