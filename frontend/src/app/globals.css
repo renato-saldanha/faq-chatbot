@@ -234,6 +234,22 @@ h2 {
   cursor: not-allowed;
 }
 
+.chat-admin-link {
+  text-align: right;
+  margin-top: 14px;
+  font-size: 13px;
+}
+
+.chat-admin-link a {
+  color: var(--ink-faint);
+  text-decoration: none;
+}
+
+.chat-admin-link a:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
 /* Auth */
 .auth-page {
   max-width: 400px;
