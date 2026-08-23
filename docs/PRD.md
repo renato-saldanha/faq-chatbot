@@ -181,3 +181,5 @@ Fora de escopo desta decisão: múltiplos admins, recuperação de conta, "lembr
 <!-- validacao: allowedTools corrigido -->
 
 <!-- teste final: causa raiz resolvida (limite de uso), sonnet 5 -->
+
+<!-- teste definitivo: sem delegacao, sonnet 5, limite ajustado -->

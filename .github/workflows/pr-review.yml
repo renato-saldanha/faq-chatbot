@@ -131,7 +131,7 @@ jobs:
             exit 0
           fi
           git commit -m "chore(review): registra resultado do review automatizado — PR #${PR_NUMBER}"
-          git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
+          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:"${{ github.event.pull_request.head.ref }}"
 
       - name: Fail on showstoppers
         env:
