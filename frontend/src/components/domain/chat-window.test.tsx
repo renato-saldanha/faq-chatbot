@@ -1,9 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "@/lib/api";
+import { renderWithClient } from "@/lib/test-utils";
 import type { ChatAskResponse } from "@/types/api";
 import { ChatWindow } from "./chat-window";
 
@@ -13,18 +13,19 @@ vi.mock("sonner");
 const mockedApi = vi.mocked(api);
 const mockedToastError = vi.mocked(toast.error);
 
+function fakeResponse(overrides: Partial<ChatAskResponse> = {}): ChatAskResponse {
+  return {
+    resposta: "Resposta qualquer",
+    faq_item_id: 1,
+    categoria: "Geral",
+    sem_resposta: false,
+    score: 0.9,
+    ...overrides,
+  };
+}
+
 function renderChatWindow() {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <ChatWindow />
-    </QueryClientProvider>,
-  );
+  return renderWithClient(<ChatWindow />);
 }
 
 async function askQuestion(pergunta: string) {
@@ -40,10 +41,6 @@ describe("ChatWindow", () => {
     vi.clearAllMocks();
   });
 
-  afterEach(() => {
-    cleanup();
-  });
-
   it("mostra o estado vazio inicial", () => {
     renderChatWindow();
 
@@ -51,13 +48,7 @@ describe("ChatWindow", () => {
   });
 
   it("envia a pergunta digitada e chama api.post com o payload correto", async () => {
-    mockedApi.post.mockResolvedValueOnce({
-      resposta: "Resposta qualquer",
-      faq_item_id: 1,
-      categoria: "Geral",
-      sem_resposta: false,
-      score: 0.9,
-    } satisfies ChatAskResponse);
+    mockedApi.post.mockResolvedValueOnce(fakeResponse());
 
     renderChatWindow();
     await askQuestion("Qual o horário de funcionamento?");
@@ -69,13 +60,7 @@ describe("ChatWindow", () => {
   });
 
   it("limpa o campo de input após o envio", async () => {
-    mockedApi.post.mockResolvedValueOnce({
-      resposta: "Resposta qualquer",
-      faq_item_id: 1,
-      categoria: "Geral",
-      sem_resposta: false,
-      score: 0.9,
-    } satisfies ChatAskResponse);
+    mockedApi.post.mockResolvedValueOnce(fakeResponse());
 
     renderChatWindow();
     await askQuestion("Alguma pergunta");
@@ -85,13 +70,9 @@ describe("ChatWindow", () => {
   });
 
   it("exibe a resposta do bot após sucesso da mutation", async () => {
-    mockedApi.post.mockResolvedValueOnce({
-      resposta: "Nosso horário é das 9h às 18h.",
-      faq_item_id: 5,
-      categoria: "Atendimento",
-      sem_resposta: false,
-      score: 0.95,
-    } satisfies ChatAskResponse);
+    mockedApi.post.mockResolvedValueOnce(
+      fakeResponse({ resposta: "Nosso horário é das 9h às 18h.", faq_item_id: 5, categoria: "Atendimento", score: 0.95 }),
+    );
 
     renderChatWindow();
     await askQuestion("Qual o horário de funcionamento?");
@@ -100,13 +81,15 @@ describe("ChatWindow", () => {
   });
 
   it("exibe o badge 'Sem resposta encontrada' quando sem_resposta é true", async () => {
-    mockedApi.post.mockResolvedValueOnce({
-      resposta: "Não encontrei uma resposta para isso.",
-      faq_item_id: null,
-      categoria: null,
-      sem_resposta: true,
-      score: null,
-    } satisfies ChatAskResponse);
+    mockedApi.post.mockResolvedValueOnce(
+      fakeResponse({
+        resposta: "Não encontrei uma resposta para isso.",
+        faq_item_id: null,
+        categoria: null,
+        sem_resposta: true,
+        score: null,
+      }),
+    );
 
     renderChatWindow();
     await askQuestion("Pergunta sem resposta na base");
@@ -144,13 +127,7 @@ describe("ChatWindow", () => {
     expect(screen.getByRole("button", { name: "Enviar" })).toBeDisabled();
     expect(screen.getByText("Digitando...")).toBeInTheDocument();
 
-    resolvePromise!({
-      resposta: "Resposta finalmente",
-      faq_item_id: 2,
-      categoria: "Geral",
-      sem_resposta: false,
-      score: 0.8,
-    });
+    resolvePromise!(fakeResponse({ resposta: "Resposta finalmente", faq_item_id: 2, score: 0.8 }));
 
     await waitFor(() => {
       expect(input).not.toBeDisabled();
