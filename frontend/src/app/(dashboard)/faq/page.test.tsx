@@ -1,10 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
 import { toast } from "sonner";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "@/lib/api";
+import { renderWithClient } from "@/lib/test-utils";
 import type { Categoria, FaqItem } from "@/types/api";
 import FaqAdminPage from "./page";
 
@@ -45,21 +44,7 @@ function mockGetDefault() {
 }
 
 function renderPage() {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-
-  function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
-  }
-
-  return {
-    queryClient,
-    ...render(<FaqAdminPage />, { wrapper: Wrapper }),
-  };
+  return renderWithClient(<FaqAdminPage />);
 }
 
 function getRowByPergunta(pergunta: string) {
@@ -73,10 +58,6 @@ describe("FaqAdminPage", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mockGetDefault();
-  });
-
-  afterEach(() => {
-    cleanup();
   });
 
   it("renderiza os itens de FAQ retornados pela query (pergunta, resposta truncada, categoria, ativo)", async () => {
