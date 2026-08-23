@@ -4,20 +4,13 @@ import pytest
 
 from app.models import Categoria, FaqItem
 from app.repositories.faq_repository import FaqRepository
-
-
-def _make_session_with_execute_result(items: list) -> AsyncMock:
-    session = AsyncMock()
-    result = MagicMock()
-    result.scalars.return_value.all.return_value = items
-    session.execute.return_value = result
-    return session
+from tests.conftest import make_session_with_scalars
 
 
 @pytest.mark.asyncio
 async def test_list_all_retorna_itens():
     item = FaqItem(id=1, categoria_id=1, pergunta="p", resposta="r", ativo=True)
-    session = _make_session_with_execute_result([item])
+    session = make_session_with_scalars([item])
     repo = FaqRepository(session)
 
     result = await repo.list_all()
@@ -75,6 +68,54 @@ async def test_delete_item_inexistente_retorna_false():
 
     assert deleted is False
     session.delete.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_save_embeddings_commita_quando_ha_itens():
+    session = AsyncMock()
+    repo = FaqRepository(session)
+    item = FaqItem(id=1, categoria_id=1, pergunta="p", resposta="r", ativo=True)
+
+    await repo.save_embeddings([item])
+
+    session.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_save_embeddings_nao_commita_lista_vazia():
+    session = AsyncMock()
+    repo = FaqRepository(session)
+
+    await repo.save_embeddings([])
+
+    session.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_find_nearest_by_embedding_retorna_item_e_distancia():
+    item = FaqItem(id=1, categoria_id=1, pergunta="p", resposta="r", ativo=True)
+    session = AsyncMock()
+    result = MagicMock()
+    result.first.return_value = (item, 0.05)
+    session.execute.return_value = result
+    repo = FaqRepository(session)
+
+    nearest = await repo.find_nearest_by_embedding([1.0, 0.0], [1])
+
+    assert nearest == (item, 0.05)
+
+
+@pytest.mark.asyncio
+async def test_find_nearest_by_embedding_sem_candidatos_retorna_none():
+    session = AsyncMock()
+    result = MagicMock()
+    result.first.return_value = None
+    session.execute.return_value = result
+    repo = FaqRepository(session)
+
+    nearest = await repo.find_nearest_by_embedding([1.0, 0.0], [])
+
+    assert nearest is None
 
 
 @pytest.mark.asyncio

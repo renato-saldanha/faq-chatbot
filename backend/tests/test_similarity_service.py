@@ -31,12 +31,11 @@ def _make_faq_item(
     return item
 
 
-def _make_session_with_items(items: list) -> AsyncMock:
-    session = AsyncMock()
-    result = MagicMock()
-    result.scalars.return_value.all.return_value = items
-    session.execute.return_value = result
-    return session
+def _make_faq_repository(items: list, nearest: tuple | None = None) -> AsyncMock:
+    repository = AsyncMock()
+    repository.list_all.return_value = items
+    repository.find_nearest_by_embedding.return_value = nearest
+    return repository
 
 
 def _make_openai_client(embedding: list[float]) -> AsyncMock:
@@ -59,9 +58,9 @@ class TestFuzzySimilarityServiceFindBestMatch:
         service = FuzzySimilarityService()
         service._threshold = 0.6
         item = _make_faq_item(1, "Como eu cadastro uma conta nova?", "Acesse a página de cadastro.", "Conta")
-        session = _make_session_with_items([item])
+        faq_repository = _make_faq_repository([item])
 
-        result = await service.find_best_match("Como eu cadastro uma conta nova?", session)
+        result = await service.find_best_match("Como eu cadastro uma conta nova?", faq_repository)
 
         assert result is not None
         assert result.faq_item_id == 1
@@ -73,18 +72,18 @@ class TestFuzzySimilarityServiceFindBestMatch:
         service = FuzzySimilarityService()
         service._threshold = 0.6
         item = _make_faq_item(1, "Como cancelo minha conta?", "Entre em contato com o suporte.", "Conta")
-        session = _make_session_with_items([item])
+        faq_repository = _make_faq_repository([item])
 
-        result = await service.find_best_match("Qual a previsão do tempo amanhã em Marte?", session)
+        result = await service.find_best_match("Qual a previsão do tempo amanhã em Marte?", faq_repository)
 
         assert result is None
 
     @pytest.mark.asyncio
     async def test_pergunta_vazia(self) -> None:
         service = FuzzySimilarityService()
-        session = _make_session_with_items([])
+        faq_repository = _make_faq_repository([])
 
-        result = await service.find_best_match("   ", session)
+        result = await service.find_best_match("   ", faq_repository)
 
         assert result is None
 
@@ -96,34 +95,77 @@ class TestEmbeddingSimilarityServiceEnsureEmbeddings:
         service = EmbeddingSimilarityService(client)
         item_sem_embedding = _make_faq_item(1, "Como cancelo minha conta?", "Resposta.", "Conta", embedding=None)
         item_com_embedding = _make_faq_item(2, "Como troco meu email?", "Resposta.", "Conta", embedding=[0.5, 0.5])
-        session = AsyncMock()
+        faq_repository = AsyncMock()
 
-        await service.ensure_embeddings([item_sem_embedding, item_com_embedding], session)
+        await service.ensure_embeddings([item_sem_embedding, item_com_embedding], faq_repository)
 
         assert item_sem_embedding.embedding == [1.0, 0.0]
         assert item_com_embedding.embedding == [0.5, 0.5]
         client.embeddings.create.assert_called_once()
-        session.commit.assert_awaited_once()
+        faq_repository.save_embeddings.assert_awaited_once_with([item_sem_embedding])
 
     @pytest.mark.asyncio
     async def test_nao_commita_quando_todos_ja_tem_embedding(self) -> None:
         client = _make_openai_client([1.0, 0.0])
         service = EmbeddingSimilarityService(client)
         item = _make_faq_item(1, "Como cancelo minha conta?", "Resposta.", "Conta", embedding=[0.1, 0.2])
-        session = AsyncMock()
+        faq_repository = AsyncMock()
 
-        await service.ensure_embeddings([item], session)
+        await service.ensure_embeddings([item], faq_repository)
 
         client.embeddings.create.assert_not_called()
-        session.commit.assert_not_awaited()
+        faq_repository.save_embeddings.assert_awaited_once_with([])
 
     @pytest.mark.asyncio
     async def test_pergunta_vazia_nao_chama_openai(self) -> None:
         client = _make_openai_client([1.0, 0.0])
         service = EmbeddingSimilarityService(client)
-        session = AsyncMock()
+        faq_repository = AsyncMock()
 
-        result = await service.find_best_match("   ", session)
+        result = await service.find_best_match("   ", faq_repository)
+
+        assert result is None
+        client.embeddings.create.assert_not_called()
+
+
+class TestEmbeddingSimilarityServiceFindBestMatch:
+    @pytest.mark.asyncio
+    async def test_match_via_distancia_de_cosseno(self) -> None:
+        client = _make_openai_client([1.0, 0.0])
+        service = EmbeddingSimilarityService(client)
+        service._threshold = 0.5
+        item = _make_faq_item(
+            1, "Como cadastro uma conta nova?", "Acesse a página de cadastro.", "Conta", embedding=[1.0, 0.0]
+        )
+        faq_repository = _make_faq_repository([item], nearest=(item, 0.05))
+
+        result = await service.find_best_match("Como crio uma conta?", faq_repository)
+
+        assert result is not None
+        assert result.faq_item_id == 1
+        assert result.categoria == "Conta"
+        assert result.score == pytest.approx(0.95)
+        faq_repository.find_nearest_by_embedding.assert_awaited_once_with([1.0, 0.0], [1])
+
+    @pytest.mark.asyncio
+    async def test_score_abaixo_do_threshold_retorna_none(self) -> None:
+        client = _make_openai_client([1.0, 0.0])
+        service = EmbeddingSimilarityService(client)
+        service._threshold = 0.6
+        item = _make_faq_item(1, "Como cadastro uma conta nova?", "Resposta.", "Conta", embedding=[1.0, 0.0])
+        faq_repository = _make_faq_repository([item], nearest=(item, 0.9))
+
+        result = await service.find_best_match("pergunta bem diferente", faq_repository)
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_sem_itens_ativos_retorna_none(self) -> None:
+        client = _make_openai_client([1.0, 0.0])
+        service = EmbeddingSimilarityService(client)
+        faq_repository = _make_faq_repository([])
+
+        result = await service.find_best_match("Como cancelo minha conta?", faq_repository)
 
         assert result is None
         client.embeddings.create.assert_not_called()
@@ -156,9 +198,9 @@ class TestHybridSimilarityServiceFindBestMatch:
             "Conta",
             embedding=np.array([1.0, 0.0]),
         )
-        session = _make_session_with_items([item])
+        faq_repository = _make_faq_repository([item])
 
-        result = await service.find_best_match("Como cadastro uma conta nova?", session)
+        result = await service.find_best_match("Como cadastro uma conta nova?", faq_repository)
 
         assert result is not None
         assert result.faq_item_id == 1
@@ -169,9 +211,9 @@ class TestHybridSimilarityServiceFindBestMatch:
     async def test_pergunta_vazia(self) -> None:
         client = _make_openai_client([1.0, 0.0])
         service = HybridSimilarityService(FuzzySimilarityService(), EmbeddingSimilarityService(client))
-        session = _make_session_with_items([])
+        faq_repository = _make_faq_repository([])
 
-        result = await service.find_best_match("   ", session)
+        result = await service.find_best_match("   ", faq_repository)
 
         assert result is None
 
@@ -179,8 +221,8 @@ class TestHybridSimilarityServiceFindBestMatch:
     async def test_sem_itens_ativos_retorna_none(self) -> None:
         client = _make_openai_client([1.0, 0.0])
         service = HybridSimilarityService(FuzzySimilarityService(), EmbeddingSimilarityService(client))
-        session = _make_session_with_items([])
+        faq_repository = _make_faq_repository([])
 
-        result = await service.find_best_match("Como cancelo minha conta?", session)
+        result = await service.find_best_match("Como cancelo minha conta?", faq_repository)
 
         assert result is None

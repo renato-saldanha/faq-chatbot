@@ -50,6 +50,27 @@ class FaqRepository:
         await self._session.commit()
         return True
 
+    async def save_embeddings(self, itens: list[FaqItem]) -> None:
+        """Persiste o `embedding` já atribuído em memória a cada item (não recalcula nada)."""
+        if itens:
+            await self._session.commit()
+
+    async def find_nearest_by_embedding(
+        self, query_vector: list[float], candidate_ids: list[int]
+    ) -> tuple[FaqItem, float] | None:
+        """Retorna o FaqItem mais próximo do vetor por distância de cosseno (pgvector), entre `candidate_ids`."""
+        query = (
+            select(FaqItem, FaqItem.embedding.cosine_distance(query_vector).label("distance"))
+            .where(FaqItem.id.in_(candidate_ids))
+            .order_by("distance")
+            .limit(1)
+        )
+        row = (await self._session.execute(query)).first()
+        if row is None:
+            return None
+        best_item, distance = row
+        return best_item, distance
+
     async def list_categorias(self) -> list[Categoria]:
         result = await self._session.execute(select(Categoria))
         return list(result.scalars().all())

@@ -5,12 +5,10 @@ from dataclasses import dataclass
 
 from openai import AsyncOpenAI
 from rapidfuzz import fuzz
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.config import get_settings
 from app.models import FaqItem
+from app.repositories.faq_repository import FaqRepository
 
 
 @dataclass(frozen=True)
@@ -33,7 +31,7 @@ def normalize_text(texto: str) -> str:
 
 class SimilarityService(ABC):
     @abstractmethod
-    async def find_best_match(self, pergunta: str, session: AsyncSession) -> MatchResult | None: ...
+    async def find_best_match(self, pergunta: str, faq_repository: FaqRepository) -> MatchResult | None: ...
 
     @abstractmethod
     async def vector_for(self, texto: str) -> object: ...
@@ -48,15 +46,12 @@ class FuzzySimilarityService(SimilarityService):
     async def vector_for(self, texto: str) -> str:
         return normalize_text(texto)
 
-    async def find_best_match(self, pergunta: str, session: AsyncSession) -> MatchResult | None:
+    async def find_best_match(self, pergunta: str, faq_repository: FaqRepository) -> MatchResult | None:
         pergunta_normalizada = normalize_text(pergunta)
         if not pergunta_normalizada:
             return None
 
-        result = await session.execute(
-            select(FaqItem).where(FaqItem.ativo.is_(True)).options(selectinload(FaqItem.categoria))
-        )
-        itens = result.scalars().all()
+        itens = await faq_repository.list_all(only_active=True)
         if not itens:
             return None
 
@@ -99,41 +94,31 @@ class EmbeddingSimilarityService(SimilarityService):
         response = await self._client.embeddings.create(model=self._model, input=texto_normalizado)
         return response.data[0].embedding
 
-    async def ensure_embeddings(self, itens: list[FaqItem], session: AsyncSession) -> None:
+    async def ensure_embeddings(self, itens: list[FaqItem], faq_repository: FaqRepository) -> None:
         """Calcula e persiste o embedding de cada item que ainda não tem (cache lazy)."""
         pendentes = [item for item in itens if item.embedding is None]
         for item in pendentes:
             item.embedding = await self.vector_for(item.pergunta)
-        if pendentes:
-            await session.commit()
+        await faq_repository.save_embeddings(pendentes)
 
-    async def find_best_match(self, pergunta: str, session: AsyncSession) -> MatchResult | None:
+    async def find_best_match(self, pergunta: str, faq_repository: FaqRepository) -> MatchResult | None:
         pergunta_normalizada = normalize_text(pergunta)
         if not pergunta_normalizada:
             return None
 
-        result = await session.execute(
-            select(FaqItem).where(FaqItem.ativo.is_(True)).options(selectinload(FaqItem.categoria))
-        )
-        itens = list(result.scalars().all())
+        itens = await faq_repository.list_all(only_active=True)
         if not itens:
             return None
 
-        await self.ensure_embeddings(itens, session)
+        await self.ensure_embeddings(itens, faq_repository)
 
         query_vector = await self.vector_for(pergunta)
 
-        distance_query = (
-            select(FaqItem, FaqItem.embedding.cosine_distance(query_vector).label("distance"))
-            .where(FaqItem.id.in_([item.id for item in itens]))
-            .order_by("distance")
-            .limit(1)
-        )
-        row = (await session.execute(distance_query)).first()
-        if row is None:
+        nearest = await faq_repository.find_nearest_by_embedding(query_vector, [item.id for item in itens])
+        if nearest is None:
             return None
 
-        best_item, distance = row
+        best_item, distance = nearest
         score = 1.0 - distance
         if score < self._threshold:
             return None
@@ -169,19 +154,16 @@ class HybridSimilarityService(SimilarityService):
     async def vector_for(self, texto: str) -> list[float]:
         return await self._embedding.vector_for(texto)
 
-    async def find_best_match(self, pergunta: str, session: AsyncSession) -> MatchResult | None:
+    async def find_best_match(self, pergunta: str, faq_repository: FaqRepository) -> MatchResult | None:
         pergunta_normalizada = normalize_text(pergunta)
         if not pergunta_normalizada:
             return None
 
-        result = await session.execute(
-            select(FaqItem).where(FaqItem.ativo.is_(True)).options(selectinload(FaqItem.categoria))
-        )
-        itens = list(result.scalars().all())
+        itens = await faq_repository.list_all(only_active=True)
         if not itens:
             return None
 
-        await self._embedding.ensure_embeddings(itens, session)
+        await self._embedding.ensure_embeddings(itens, faq_repository)
         query_vector = await self.vector_for(pergunta)
 
         best_item: FaqItem | None = None

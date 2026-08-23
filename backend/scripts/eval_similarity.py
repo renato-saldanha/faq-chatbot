@@ -16,6 +16,7 @@ from sqlalchemy import select
 from app.api.chat import get_similarity_service
 from app.db import async_session_maker
 from app.models import FaqItem
+from app.repositories.faq_repository import FaqRepository
 
 DATASET_PATH = Path(__file__).parent / "similarity_eval_dataset.json"
 
@@ -36,11 +37,12 @@ async def run() -> None:
     resultados = []
 
     async with async_session_maker() as session:
+        faq_repository = FaqRepository(session)
         for caso in casos:
             expected_id = await resolve_expected_id(session, caso["faq_pergunta_esperada"])
 
             start = time.perf_counter()
-            match = await service.find_best_match(caso["pergunta"], session)
+            match = await service.find_best_match(caso["pergunta"], faq_repository)
             elapsed_ms = (time.perf_counter() - start) * 1000
 
             got_id = match.faq_item_id if match else None

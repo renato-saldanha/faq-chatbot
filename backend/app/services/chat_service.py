@@ -1,6 +1,6 @@
 from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.repositories.faq_repository import FaqRepository
 from app.repositories.interacao_repository import InteracaoRepository
 from app.services.similarity_service import SimilarityService
 
@@ -20,14 +20,14 @@ class ChatService:
         self,
         similarity_service: SimilarityService,
         interacao_repository: InteracaoRepository,
-        session: AsyncSession,
+        faq_repository: FaqRepository,
     ) -> None:
         self._similarity_service = similarity_service
         self._interacao_repository = interacao_repository
-        self._session = session
+        self._faq_repository = faq_repository
 
     async def ask(self, pergunta: str) -> ChatResponse:
-        match = await self._similarity_service.find_best_match(pergunta, self._session)
+        match = await self._similarity_service.find_best_match(pergunta, self._faq_repository)
 
         if match is None:
             await self._interacao_repository.create(
