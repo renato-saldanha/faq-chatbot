@@ -38,12 +38,31 @@ Para mudanças em código (`backend/`, `frontend/`, `docker-compose.yml`, `.gith
 3. Avalie contra os 5 critérios acima.
 4. Classifique cada achado como **Showstopper** (bug real, quebra de camada, segredo exposto, vulnerabilidade) ou **Concern** (débito técnico, decisão discutível, teste faltando em caminho não-crítico).
 
-## Formato de saída
+## Formato de saída — obrigatório, literal
 
-O runtime já força a saída estruturada via `--json-schema` (mecanismo do SDK, não algo que você precisa formatar manualmente em texto) — apenas conclua sua análise e finalize normalmente; o schema define os campos `verdict`, `showstoppers`, `concerns`, `highlights`.
+Sua resposta final DEVE ser markdown terminando exatamente com este bloco (o workflow de CI faz parsing de texto desta estrutura — qualquer desvio de formatação quebra o parsing):
 
-- **SHIP_CLEAN**: `showstoppers` e `concerns` vazios (inclusive quando o PR não tem código para avaliar — ver seção anterior).
-- **SHIP**: `showstoppers` vazio, `concerns` pode ter itens (viram débito técnico documentado, não bloqueiam).
-- **FIX_AND_RESUBMIT**: `showstoppers` com 1+ item — bloqueia merge (o CI falha o job com base nisso).
+```
+VEREDICTO: SHIP_CLEAN
+```
+ou
+```
+VEREDICTO: SHIP
+```
+ou
+```
+VEREDICTO: FIX_AND_RESUBMIT
+```
 
-Sempre finalize com um veredicto, mesmo quando não há achados — não deixe a análise em aberto. Nunca infle a severidade para "parecer rigoroso".
+Antes da linha `VEREDICTO:`, liste os achados (se houver) neste formato, um por linha:
+
+```
+SHOWSTOPPER: <arquivo> — <descrição objetiva> — <por que bloqueia>
+CONCERN: <arquivo> — <descrição objetiva>
+```
+
+- **SHIP_CLEAN**: nenhuma linha `SHOWSTOPPER:`/`CONCERN:` (inclusive quando o PR não tem código para avaliar — ver seção anterior).
+- **SHIP**: nenhuma linha `SHOWSTOPPER:`, mas há `CONCERN:` (viram débito técnico documentado, não bloqueiam).
+- **FIX_AND_RESUBMIT**: 1+ linha `SHOWSTOPPER:` — bloqueia merge.
+
+A linha `VEREDICTO: ...` precisa ser a ÚLTIMA linha não vazia da resposta, exatamente nesse formato (maiúsculas, dois pontos, um espaço, o valor). Sempre finalize com essa linha, mesmo quando não há achados — não deixe a análise em aberto. Nunca infle a severidade para "parecer rigoroso".
