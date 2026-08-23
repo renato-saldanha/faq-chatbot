@@ -1,0 +1,26 @@
+[
+  { "pergunta": "Como eu cadastro uma conta nova?", "faq_pergunta_esperada": "Como eu cadastro uma conta nova?", "tipo": "caso_facil" },
+  { "pergunta": "Como recupero minha senha?", "faq_pergunta_esperada": "Como recupero minha senha?", "tipo": "caso_facil" },
+  { "pergunta": "Como cancelo minha conta?", "faq_pergunta_esperada": "Como cancelo minha conta?", "tipo": "caso_facil" },
+  { "pergunta": "Quais formas de pagamento são aceitas?", "faq_pergunta_esperada": "Quais formas de pagamento são aceitas?", "tipo": "caso_facil" },
+  { "pergunta": "Como solicito reembolso?", "faq_pergunta_esperada": "Como solicito reembolso?", "tipo": "caso_facil" },
+  { "pergunta": "O aplicativo não abre, o que faço?", "faq_pergunta_esperada": "O aplicativo não abre, o que faço?", "tipo": "caso_facil" },
+  { "pergunta": "Qual o prazo de entrega?", "faq_pergunta_esperada": "Qual o prazo de entrega?", "tipo": "caso_facil" },
+  { "pergunta": "Como rastreio meu pedido?", "faq_pergunta_esperada": "Como rastreio meu pedido?", "tipo": "caso_facil" },
+  { "pergunta": "O que está incluso no plano Premium?", "faq_pergunta_esperada": "O que está incluso no plano Premium?", "tipo": "caso_facil" },
+  { "pergunta": "Meus dados são compartilhados com terceiros?", "faq_pergunta_esperada": "Meus dados são compartilhados com terceiros?", "tipo": "caso_facil" },
+
+  { "pergunta": "Quero encerrar meu cadastro, como faço?", "faq_pergunta_esperada": "Como cancelo minha conta?", "tipo": "parafrase" },
+  { "pergunta": "Esqueci minha senha, e agora?", "faq_pergunta_esperada": "Como recupero minha senha?", "tipo": "parafrase" },
+  { "pergunta": "Vocês aceitam boleto?", "faq_pergunta_esperada": "Quais formas de pagamento são aceitas?", "tipo": "parafrase" },
+  { "pergunta": "Quanto tempo demora pra chegar meu produto?", "faq_pergunta_esperada": "Qual o prazo de entrega?", "tipo": "parafrase" },
+  { "pergunta": "Quero falar com uma pessoa de verdade, não um robô", "faq_pergunta_esperada": "Como falo com um atendente humano?", "tipo": "parafrase" },
+
+  { "pergunta": "Como recupero minha cenha?", "faq_pergunta_esperada": "Como recupero minha senha?", "tipo": "typo" },
+  { "pergunta": "Qauis formas de pagameto são aceitas?", "faq_pergunta_esperada": "Quais formas de pagamento são aceitas?", "tipo": "typo" },
+  { "pergunta": "Como cadastro uma conta noba?", "faq_pergunta_esperada": "Como eu cadastro uma conta nova?", "tipo": "typo" },
+  { "pergunta": "Qual o horario de atendimeto?", "faq_pergunta_esperada": "Qual o horário de atendimento?", "tipo": "typo" },
+  { "pergunta": "Como rastrio meu pedid?", "faq_pergunta_esperada": "Como rastreio meu pedido?", "tipo": "typo" },
+
+  { "pergunta": "Qual a previsão do tempo amanhã em Marte?", "faq_pergunta_esperada": null, "tipo": "sem_match" }
+]
