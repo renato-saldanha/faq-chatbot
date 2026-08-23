@@ -1,8 +1,9 @@
 """Roda o gabarito de similaridade (docs/PRD.md §5) contra o SimilarityService ativo.
 
 Mede acurácia por categoria de caso (caso_facil, parafrase, typo, sem_match) usando
-o mesmo mecanismo do chat real (FuzzySimilarityService.find_best_match) — não
-reimplementa a lógica de match, só chama a fronteira pública do service.
+o mesmo mecanismo do chat real (find_best_match do backend selecionado via
+SIMILARITY_BACKEND) — não reimplementa a lógica de match, só chama a fronteira
+pública do service.
 """
 
 import asyncio
@@ -12,9 +13,9 @@ from pathlib import Path
 
 from sqlalchemy import select
 
+from app.api.chat import get_similarity_service
 from app.db import async_session_maker
 from app.models import FaqItem
-from app.services.similarity_service import FuzzySimilarityService
 
 DATASET_PATH = Path(__file__).parent / "similarity_eval_dataset.json"
 
@@ -31,7 +32,7 @@ async def run() -> None:
     with open(DATASET_PATH, encoding="utf-8") as f:
         casos = json.load(f)
 
-    service = FuzzySimilarityService()
+    service = get_similarity_service()
     resultados = []
 
     async with async_session_maker() as session:
