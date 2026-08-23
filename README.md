@@ -46,8 +46,8 @@ Procure pela linha `SMTP não configurado — OTP para <email>: <código>` (ver 
 A base fictícia (`scripts/seed_faq.py`) já popula 50 perguntas em 6 categorias no primeiro boot — não é preciso cadastrar nada manualmente para testar o fluxo completo:
 
 1. Suba a stack (`docker compose up --build`) e abra http://localhost:3000 — o chat já responde perguntas do seed (ex: "Como recupero minha senha?") e trata pergunta sem match retornando `sem_resposta: true`.
-2. Clique em "Painel interno" (canto superior direito do chat) → login com o `ADMIN_EMAIL` configurado → código OTP (log do backend ou e-mail real, conforme SMTP) → cai no dashboard de métricas, já populado pelas interações do passo 1.
-3. Em "FAQ", teste o CRUD: criar uma pergunta nova, verificar que ela já aparece na lista e responde no chat sem precisar reiniciar nada; editar e excluir também refletem imediatamente.
+2. Clique em "Painel interno" (canto superior direito do chat) → login com o `ADMIN_EMAIL` configurado → código OTP (log do backend ou e-mail real, conforme SMTP) → cai direto na tela de FAQ.
+3. Teste o CRUD: criar uma pergunta nova, verificar que ela já aparece na lista e responde no chat sem precisar reiniciar nada; editar e excluir também refletem imediatamente. Em "Métricas" (nav do topo), as interações do passo 1 já aparecem nos gráficos e cards.
 4. Para repetir o teste do zero (base limpa, sem histórico de interações): `docker compose down -v && docker compose up --build` — a migration (`alembic upgrade head`) recria o schema e o seed repovoa a base fictícia automaticamente, sem passo manual algum.
 
 ## Variáveis de ambiente
@@ -108,6 +108,24 @@ docker-compose.yml   # postgres (pgvector) + backend + frontend
 
 Detalhes de arquitetura e convenções de código: `CLAUDE.md` na raiz.
 
+## Padrões de arquitetura
+
+**Backend**
+
+- **Camadas em cadeia unidirecional:** `api/` (rota FastAPI) → `services/` (regra de negócio) → `repositories/` (acesso a dados) → `models/` (SQLAlchemy). Cada camada só conhece a de baixo — nenhuma rota acessa modelo direto, nenhum repository conhece service.
+- **Repository Pattern** (`app/repositories/`) — cada repository (`FaqRepository`, `InteracaoRepository`, `TimeseriesMetricsRepository`, `FaqMetricsRepository`) isola toda a query SQLAlchemy da tabela correspondente; services nunca montam `select(...)` diretamente.
+- **Strategy Pattern** (`app/services/similarity_service.py`) — `SimilarityService` é uma interface abstrata (`find_best_match`, `vector_for`); `FuzzySimilarityService` é a única implementação hoje, mas o `ChatService` e o restante do código dependem só da interface, nunca da classe concreta — trocar o backend de similaridade (ex: por embedding) não exige tocar em quem consome.
+- **Dependency Injection via constructor + FastAPI `Depends()`:** nenhuma classe instancia sua própria dependência (`self.x = AlgumaCoisa()` é proibido pela convenção do projeto). Repository recebe `AsyncSession` no `__init__`; service recebe repository(s)/outros services no `__init__`; a rota resolve a árvore inteira via `Depends(get_chat_service)` (ver `app/api/chat.py`). Isso é o que torna os services testáveis com fakes, sem subir Postgres real nos testes.
+- **DTO explícito entre camadas:** `MatchResult`, `ChatResponse`, `MetricsSummary` são `@dataclass(frozen=True)` — estruturas imutáveis internas que nunca vazam para o Pydantic de resposta HTTP sem conversão explícita na rota. Pydantic (`BaseModel`) fica reservado para I/O de API (validação de request/response).
+
+**Frontend**
+
+- **Container/presentational implícito via App Router:** páginas (`src/app/**/page.tsx`) orquestram data-fetching (`useQuery`/`useMutation`) e passam dados prontos para componentes de domínio (`src/components/domain/`), que são majoritariamente apresentacionais.
+- **Client fino centralizado** (`src/lib/api.ts`) — único ponto que fala com o backend; nenhum componente chama `fetch` diretamente, o que mantém `credentials: "include"` e o tratamento de erro consistentes em um lugar.
+- **Store global mínimo** (`src/stores/auth-store.ts`, Zustand) — só o essencial de estado de sessão do lado UI; a fonte de verdade real da sessão é o cookie JWT httpOnly, a store existe para o guard de rota decidir renderizar sem esperar um round-trip.
+- **Contrato de tipos compartilhado** (`src/types/api.ts`) — espelha os schemas Pydantic do backend; nunca um componente redefine um shape equivalente solto.
+- **Design tokens via CSS variables** (`src/app/globals.css`) — toda cor/espaçamento vem de `var(--token)`, nunca hex direto num componente; permite alternar tema claro/escuro (`data-theme` no `<html>`) sem duplicar lógica de estilo em JS.
+
 ## Testes e lint
 
 ```bash
@@ -120,12 +138,11 @@ ruff check . && mypy app/  # ambos limpos
 cd frontend
 npx tsc --noEmit
 npm run lint
-npm run test
+npm run test          # 29 passed
 ```
 
 ## Escopo cortado sob prazo (decisões conscientes)
 
 - **`SIMILARITY_BACKEND=fuzzy` único** — ver seção de decisão acima.
-- **Sem testes de frontend além de um placeholder** (`utils.test.ts`) — zero cobertura Vitest de componentes/páginas.
 - **CI/CD desativado.** Foi construído (GitHub Actions com gate de review por IA), debugado extensivamente e depois abandonado por consumir tempo demais para o prazo. Os arquivos `.github/workflows/*.yml` continuam no repositório como referência, mas não estão ativos — branch protection foi removida, trabalho commitado direto na branch principal.
 - **Sem testes E2E** (Playwright/Cypress).
