@@ -177,3 +177,5 @@ Fora de escopo desta decisão: múltiplos admins, recuperação de conta, "lembr
 <!-- validacao: gate sem --agent, apos fix do PR #4 -->
 
 <!-- validacao final: gate com execution_file + log persistido -->
+
+<!-- validacao: allowedTools corrigido -->
