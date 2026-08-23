@@ -114,7 +114,7 @@ backend/
 ├── alembic/                     # Migrations (extensão pgvector + 3 tabelas)
 ├── scripts/seed_faq.py           # Seed idempotente, rodado automaticamente no boot
 ├── scripts/eval_similarity.py    # Gabarito de similaridade — ver "Decisão" acima
-├── tests/                        # 47 testes, espelha app/, sem depender de Postgres real
+├── tests/                        # 71 testes (services/repositories + rotas HTTP), sem depender de Postgres real
 └── Dockerfile
 
 frontend/
@@ -156,7 +156,7 @@ Detalhes de arquitetura e convenções de código: `CLAUDE.md` na raiz.
 ```bash
 # Backend
 cd backend
-pytest tests/ -v          # 47 passed
+pytest tests/ -v          # 71 passed
 ruff check . && mypy app/  # ambos limpos
 
 # Frontend
