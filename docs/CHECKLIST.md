@@ -2,7 +2,7 @@
 
 Estado real do projeto contra as 12 Partes do `PLANO_IMPLEMENTACAO.md`, cruzado com commits, testes e o smoke test manual desta sessão — não com relatório de sessão anterior.
 
-**Status atual:** 11/12 partes completas.
+**Status atual:** 11/12 partes completas (Parte 2 parcial — protótipo A + gabarito de avaliação; B/C fora do escopo).
 
 ## Feito e validado
 
@@ -32,11 +32,13 @@ Estado real do projeto contra as 12 Partes do `PLANO_IMPLEMENTACAO.md`, cruzado 
 
 - [x] **Parte 11 — Documentação e entrega.** `README.md` com setup, env vars, decisão de similaridade, estrutura. Commits organizados por unidade lógica, enviados ao GitHub. `/code-review high` rodado sobre o diff inicial — sem achados.
 
+- [x] **Parte 2 — Protótipos de similaridade (parcial).** Protótipo A (fuzzy, `rapidfuzz`) implementado e em produção. Gabarito de avaliação implementado (`scripts/eval_similarity.py` + `similarity_eval_dataset.json`, 21 casos) e rodado contra o backend real: 100% em casos fáceis e typos, 0% em paráfrases, ~2-3ms de latência média — resultado documentado no README com tabela bruta. Protótipos B (embedding) e C (híbrido) não implementados. Schema já suporta `embedding` via `pgvector` — extensível sem tocar em `ChatService`.
+
+- [x] **CI/CD.** `ci.yml` reativado (estava quebrado — usava pnpm, projeto usa npm) e validado com run real do GitHub Actions passando (backend + frontend + docker-build). Gate de review por IA (`pr-review.yml`) removido — não fazia parte do escopo pedido.
+
 ## Fora do escopo desta entrega (decisão consciente)
 
-- [~] **Parte 2 — Protótipos de similaridade.** Protótipo A (fuzzy, `rapidfuzz`) implementado e em produção. Protótipo B (embedding OpenAI) e C (híbrido) não implementados, script de avaliação comparativo não feito. Schema já suporta `embedding` via `pgvector` — extensível sem tocar em `ChatService`.
-
-- [~] **CI/CD e testes E2E.** GitHub Actions com gate de review por IA — construído, depois desativado. Testes E2E automatizados (Playwright em CI) — só rodados ad-hoc nesta sessão. Branch protection removida, commits diretos na `master`. Workflows continuam no repo como referência.
+- [~] **Testes E2E.** Playwright rodado ad-hoc nesta sessão para smoke tests manuais, não integrado como suíte automatizada em CI.
 
 ## Pendente
 
