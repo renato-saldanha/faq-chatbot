@@ -44,7 +44,7 @@ describe("VerifyForm", () => {
     });
   });
 
-  it("em sucesso com authenticated: true, autentica na store e navega para /metricas", async () => {
+  it("em sucesso com authenticated: true, autentica na store e navega para /faq", async () => {
     vi.mocked(api.post).mockResolvedValueOnce({ authenticated: true });
     const user = userEvent.setup();
     renderWithClient(<VerifyForm email="usuario@example.com" />);
@@ -55,7 +55,7 @@ describe("VerifyForm", () => {
     await waitFor(() => {
       expect(useAuthStore.getState().isAuthenticated).toBe(true);
     });
-    expect(pushMock).toHaveBeenCalledWith("/metricas");
+    expect(pushMock).toHaveBeenCalledWith("/faq");
   });
 
   it("em caso de erro (código inválido), chama toast.error e não navega", async () => {

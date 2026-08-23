@@ -21,7 +21,7 @@ export function VerifyForm({ email }: VerifyFormProps) {
     onSuccess: (data) => {
       if (data.authenticated) {
         setAuthenticated(true);
-        router.push("/metricas");
+        router.push("/faq");
       }
     },
     onError: () => toast.error("Código inválido ou expirado."),
