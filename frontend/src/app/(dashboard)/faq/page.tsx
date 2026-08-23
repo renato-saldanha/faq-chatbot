@@ -155,7 +155,7 @@ export default function FaqAdminPage() {
                 <td>{item.resposta.slice(0, 60)}{item.resposta.length > 60 ? "..." : ""}</td>
                 <td>{item.categoria_nome}</td>
                 <td>{item.ativo ? "Sim" : "Não"}</td>
-                <td>
+                <td className="actions-cell">
                   <button onClick={() => handleEdit(item)}>Editar</button>
                   <button onClick={() => handleDelete(item.id)}>Excluir</button>
                 </td>

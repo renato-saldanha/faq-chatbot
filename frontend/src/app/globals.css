@@ -1,14 +1,14 @@
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap");
 
 :root {
-  --ink: #22302c;
-  --ink-soft: #4a5a54;
-  --ink-faint: #8a9089;
-  --surface: #fffdf9;
+  --ink: #1c2523;
+  --ink-soft: #566461;
+  --ink-faint: #8b9693;
+  --surface: #ffffff;
   --surface-raised: #ffffff;
-  --surface-sunken: #f4f1e9;
-  --border: #e4ded0;
-  --border-soft: #eeeadf;
+  --surface-sunken: #f6f8f7;
+  --border: #e2e7e5;
+  --border-soft: #edf1ef;
 
   --primary: #0e8f6a;
   --primary-dark: #0a6e51;
@@ -18,21 +18,74 @@
   --accent-dark: #a8562c;
   --accent-tint: #fbeee3;
 
-  --nav-bg: #1c2b26;
+  --nav-bg: #16211d;
   --nav-text: #cfd9d3;
 
   --font-display: "Fraunces", Georgia, "Times New Roman", serif;
   --font-body: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "IBM Plex Mono", "SF Mono", Consolas, monospace;
 
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
-  --shadow-card: 0 1px 2px rgba(34, 48, 44, 0.04), 0 4px 14px rgba(34, 48, 44, 0.05);
+  --shadow-card: 0 1px 2px rgba(28, 37, 35, 0.04), 0 4px 14px rgba(28, 37, 35, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #e9edeb;
+    --ink-soft: #aab6b2;
+    --ink-faint: #718080;
+    --surface: #182420;
+    --surface-raised: #1e2b26;
+    --surface-sunken: #131c19;
+    --border: #2c3a35;
+    --border-soft: #24312c;
+
+    --primary: #3ecb98;
+    --primary-dark: #6adcb2;
+    --primary-tint: #1c3830;
+
+    --accent: #e2925f;
+    --accent-dark: #f0b083;
+    --accent-tint: #3a2a1f;
+
+    --nav-bg: #0e1613;
+    --nav-text: #b6c2be;
+
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.2), 0 4px 14px rgba(0, 0, 0, 0.25);
+  }
+}
+
+:root[data-theme="dark"] {
+  --ink: #e9edeb;
+  --ink-soft: #aab6b2;
+  --ink-faint: #718080;
+  --surface: #182420;
+  --surface-raised: #1e2b26;
+  --surface-sunken: #131c19;
+  --border: #2c3a35;
+  --border-soft: #24312c;
+
+  --primary: #3ecb98;
+  --primary-dark: #6adcb2;
+  --primary-tint: #1c3830;
+
+  --accent: #e2925f;
+  --accent-dark: #f0b083;
+  --accent-tint: #3a2a1f;
+
+  --nav-bg: #0e1613;
+  --nav-text: #b6c2be;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.2), 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 
 * {
   box-sizing: border-box;
+}
+
+html {
+  background: var(--surface-sunken);
 }
 
 body {
@@ -75,13 +128,13 @@ h2 {
 }
 
 h1 {
-  font-size: 30px;
+  font-size: 29px;
   font-weight: 600;
   margin: 0 0 4px;
 }
 
 h2 {
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 600;
   margin: 0 0 14px;
 }
@@ -105,6 +158,33 @@ h2 {
   flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 8px;
+}
+
+/* Theme toggle */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  flex: none;
+}
+
+.theme-toggle:hover {
+  border-color: var(--primary);
+  color: var(--primary-dark);
+  background: var(--primary-tint);
+}
+
+.theme-toggle svg {
+  width: 17px;
+  height: 17px;
 }
 
 /* Chat */
@@ -192,7 +272,7 @@ h2 {
 
 .chat-bubble-bot:has(.chat-badge) {
   background: var(--accent-tint);
-  border: 1px solid #f0d3bc;
+  border: 1px solid var(--accent);
 }
 
 .chat-badge {
@@ -278,6 +358,13 @@ h2 {
   align-items: flex-start;
   gap: 16px;
   flex-wrap: wrap;
+}
+
+.chat-page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
 }
 
 .chat-admin-button {
@@ -396,6 +483,18 @@ h2 {
   color: #fff;
 }
 
+.dashboard-nav .theme-toggle {
+  border-color: #3d4d47;
+  background: transparent;
+  color: var(--nav-text);
+}
+
+.dashboard-nav .theme-toggle:hover {
+  border-color: var(--nav-text);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .dashboard-logout {
   background: transparent;
   border: 1px solid #3d4d47;
@@ -449,6 +548,7 @@ h2 {
 .metric-card {
   background: var(--surface-raised);
   border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
   border-radius: var(--radius-md);
   padding: 18px 20px;
   display: flex;
@@ -466,11 +566,12 @@ h2 {
 }
 
 .metric-value {
-  font-family: var(--font-mono);
-  font-size: 30px;
-  font-weight: 600;
+  font-family: var(--font-body);
+  font-size: 32px;
+  font-weight: 700;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 .chart-section,
@@ -500,8 +601,8 @@ h2 {
     background:
       linear-gradient(to right, var(--surface-raised) 30%, rgba(255, 255, 255, 0)),
       linear-gradient(to right, rgba(255, 255, 255, 0), var(--surface-raised) 70%) 100% 0,
-      linear-gradient(to right, rgba(34, 48, 44, 0.08), rgba(34, 48, 44, 0)),
-      linear-gradient(to left, rgba(34, 48, 44, 0.08), rgba(34, 48, 44, 0)) 100% 0;
+      linear-gradient(to right, rgba(28, 37, 35, 0.08), rgba(28, 37, 35, 0)),
+      linear-gradient(to left, rgba(28, 37, 35, 0.08), rgba(28, 37, 35, 0)) 100% 0;
     background-repeat: no-repeat;
     background-size: 24px 100%, 24px 100%, 8px 100%, 8px 100%;
     background-attachment: local, local, scroll, scroll;
@@ -516,25 +617,35 @@ h2 {
 
 .data-table th {
   text-align: left;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
-  font-size: 12.5px;
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--border);
+  font-size: 12px;
   font-weight: 600;
   color: var(--ink-soft);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
 }
 
 .data-table td {
   text-align: left;
-  padding: 12px;
+  padding: 13px 12px;
   border-bottom: 1px solid var(--border-soft);
   font-size: 14px;
   color: var(--ink);
+  vertical-align: middle;
+}
+
+.data-table tbody tr {
+  transition: background 0.1s ease;
 }
 
 .data-table tbody tr:hover {
   background: var(--surface-sunken);
+}
+
+.data-table td:nth-child(2) {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .faq-form {
@@ -603,6 +714,7 @@ h2 {
   font-size: 13.5px;
   font-weight: 500;
   cursor: pointer;
+  white-space: nowrap;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
@@ -612,8 +724,11 @@ h2 {
   background: var(--primary-tint);
 }
 
-.data-table td button + button {
-  margin-left: 6px;
+.data-table td.actions-cell {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
 }
 
 @media (max-width: 640px) {
@@ -624,6 +739,6 @@ h2 {
     grid-template-columns: 1fr;
   }
   h1 {
-    font-size: 25px;
+    font-size: 24px;
   }
 }

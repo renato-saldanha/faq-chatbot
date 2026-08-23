@@ -15,11 +15,14 @@ export function TimeseriesChart({ data }: TimeseriesChartProps) {
   return (
     <ResponsiveContainer width="100%" height={280}>
       <LineChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="data" />
-        <YAxis allowDecimals={false} />
-        <Tooltip />
-        <Line type="monotone" dataKey="quantidade" stroke="#0e8f6a" strokeWidth={2} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+        <XAxis dataKey="data" stroke="var(--ink-faint)" tick={{ fill: "var(--ink-soft)" }} />
+        <YAxis allowDecimals={false} stroke="var(--ink-faint)" tick={{ fill: "var(--ink-soft)" }} />
+        <Tooltip
+          contentStyle={{ background: "var(--surface-raised)", border: "1px solid var(--border)", borderRadius: 8 }}
+          labelStyle={{ color: "var(--ink)" }}
+        />
+        <Line type="monotone" dataKey="quantidade" stroke="var(--primary)" strokeWidth={2} />
       </LineChart>
     </ResponsiveContainer>
   );

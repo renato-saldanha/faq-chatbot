@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth-store";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -35,6 +36,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="dashboard-links">
           <Link href="/metricas">Métricas</Link>
           <Link href="/faq">FAQ</Link>
+          <ThemeToggle />
           <button onClick={handleLogout} className="dashboard-logout">
             Sair
           </button>
