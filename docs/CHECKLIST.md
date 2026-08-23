@@ -45,6 +45,8 @@ Estado real do projeto contra as 12 Partes do `PLANO_IMPLEMENTACAO.md`, cruzado 
 
 - [x] **Testes de rota HTTP** (`test_chat.py`, `test_faq.py`, `test_metrics.py`, `test_auth.py`) — a lacuna de cobertura identificada na auditoria de estrutura (só services/repositories eram testados, nenhuma rota `api/*.py` diretamente). 24 testes via `TestClient` + `app.dependency_overrides`, cobrindo status code, serialização de resposta, 401 sem sessão nas rotas protegidas, 404/422 e o cookie httpOnly do login. Suíte total: 71/71.
 
+- [x] **Auditoria de segurança dedicada.** JWT, cookie de sessão, SQL injection, XSS, CORS, autorização, segredos e dependências — sem achado crítico (detalhe no `README.md`, seção "Segurança"). Dois problemas reais corrigidos: (1) `/api/chat/ask` sem rate limit — rota pública que aciona chamada de billing real à OpenAI (backends `embedding`/`hybrid`), corrigida com `slowapi` (10/min por IP) + `max_length=1000` na pergunta; (2) brute-force do código OTP — rate limit existia só para pedir código novo, não para tentativas de verificação, corrigido com um segundo limite em `OtpStore` (5 tentativas/15min). 2 testes de regressão novos, suíte total: 73/73.
+
 ## Fora do escopo desta entrega (decisão consciente)
 
 - [~] **Testes E2E.** Playwright rodado ad-hoc nesta sessão para smoke tests manuais, não integrado como suíte automatizada em CI.
