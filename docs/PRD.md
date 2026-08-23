@@ -183,5 +183,3 @@ O workflow `pr-review.yml` roda um agente (`.claude/agents/pr-reviewer.md`) cont
 **Modelo:** Sonnet 5 (`--model claude-sonnet-5`), não o padrão da action — Opus custava ~$0.50–0.70 por execução, desproporcional para revisar diffs de PR.
 
 **Bootstrap paradox conhecido:** a action recusa rodar em qualquer PR que altere o próprio `pr-review.yml` (proteção documentada contra workflow malicioso — exige o arquivo idêntico ao da branch padrão). PR desse tipo precisa de bypass administrativo pontual (`enforce_admins` desativado, merge, reativado imediatamente), documentado no corpo do merge commit.
-
-<!-- validação: comentário na PR -->
