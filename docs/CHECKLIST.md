@@ -38,9 +38,15 @@ Estado real do projeto contra as 12 Partes do `PLANO_IMPLEMENTACAO.md`, cruzado 
   - *Bug real corrigido nesta etapa:* `HybridSimilarityService.find_best_match` fazia `if item.embedding` para checar presença de embedding — `item.embedding` é `numpy.ndarray` (via pgvector), e `bool()` de array multi-elemento levanta `ValueError`. Só apareceu ao rodar contra o Postgres real (mock de teste usava `list`, que mascarava o bug). Corrigido para `is not None`; teste de regressão adicionado usando `numpy.array` para reproduzir o tipo real.
   - *Calibração 90.5% → 100%:* diagnóstico caso a caso das 2 falhas (não ajuste cego). Item ambíguo do seed reescrito (`"Esqueci meu login, o que fazer?"` sobrepunha semanticamente com recuperação de senha) e `SIMILARITY_THRESHOLD` recalibrado de `0.6` para `0.55` (verificado contra o teto real dos casos `sem_match`, ~0.30, sem risco de falso positivo). Ver `docs/similarity_eval_output.txt` seção "RODADA DE CALIBRAÇÃO" e `CLAUDE.md`.
 
+- [x] **Auditoria de aderência ao enunciado original (`.docx`).** Duas auditorias independentes (agentes separados, sem contexto prévio): (1) os 15 itens do enunciado (5 chatbot + 6 dashboard + 4 técnicos) verificados contra o código real (rotas, componentes, docker-compose), não contra documentação própria — **100% conforme**, com evidência arquivo:linha para cada item; (2) estrutura/arquitetura do codebase avaliada de forma independente — achado real: as 3 classes de `SimilarityService` acessavam `AsyncSession`/`select(...)` diretamente, reimplementando (triplicando) a mesma query que já existia em `FaqRepository.list_all()`, e chamavam `session.commit()` direto do service.
+  - *Corrigido:* `SimilarityService.find_best_match` agora recebe `FaqRepository` (não `AsyncSession`); query de listagem, busca por distância de cosseno (`find_nearest_by_embedding`) e persistência de embedding (`save_embeddings`) centralizadas no repository. `HybridSimilarityService`/`EmbeddingSimilarityService` não tocam mais SQL. `get_faq_repository` consolidado em `app/api/_deps.py` (estava duplicado em `faq.py`, reimplementado de novo em `chat.py`).
+  - *Também corrigido:* exception handler global no FastAPI (`app/main.py`) — antes, qualquer erro não previsto (fora do que já tinha `HTTPException` específica) caía no 500 cru do Starlette sem log nem formato de resposta consistente.
+  - 8 testes novos (repository + handler global), suíte total 47/47 verde, gabarito de similaridade revalidado em 100% (21/21) após a refatoração.
+
 ## Fora do escopo desta entrega (decisão consciente)
 
 - [~] **Testes E2E.** Playwright rodado ad-hoc nesta sessão para smoke tests manuais, não integrado como suíte automatizada em CI.
+- [~] **Testes de rota HTTP dedicados** (`test_faq.py`/`test_metrics.py`/`test_chat.py` cobrindo status code/serialização/auth via `TestClient`) — hoje só services/repositories são testados diretamente; risco baixo dado o tamanho do projeto, mas é a lacuna de cobertura mais visível identificada na auditoria de estrutura.
 
 ## Pendente
 
