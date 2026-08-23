@@ -173,3 +173,5 @@ Fora de escopo desta decisão: múltiplos admins, recuperação de conta, "lembr
 - README documenta esse comportamento explicitamente (Parte 9), incluindo como resetar o banco para testar o fluxo de admin cadastrando do zero, se o avaliador quiser.
 
 <!-- validação: confirma que o gate de review roda sem bootstrap paradox neste PR -->
+
+<!-- validacao: gate sem --agent, apos fix do PR #4 -->
