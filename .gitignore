@@ -33,5 +33,11 @@ pnpm-debug.log*
 # Docker
 docker-compose.override.yml
 
+# Playwright
+frontend/e2e/.auth/
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+
 # Agent worktrees (local, per-session)
 .claude/worktrees/
