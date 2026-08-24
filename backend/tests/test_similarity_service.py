@@ -3,13 +3,20 @@ from unittest.mock import AsyncMock, MagicMock
 
 import numpy as np
 import pytest
+from openai import APIError
 
 from app.services.similarity_service import (
     EmbeddingSimilarityService,
+    FallbackSimilarityService,
     FuzzySimilarityService,
     HybridSimilarityService,
+    MatchResult,
     normalize_text,
 )
+
+
+def _make_api_error() -> APIError:
+    return APIError("falha na API", request=MagicMock(), body=None)
 
 
 def _make_faq_item(
@@ -226,3 +233,49 @@ class TestHybridSimilarityServiceFindBestMatch:
         result = await service.find_best_match("Como cancelo minha conta?", faq_repository)
 
         assert result is None
+
+
+class TestFallbackSimilarityServiceFindBestMatch:
+    @pytest.mark.asyncio
+    async def test_usa_primary_quando_nao_ha_erro(self) -> None:
+        item = _make_faq_item(1, "Como cadastro uma conta nova?", "Acesse a página de cadastro.", "Conta")
+        faq_repository = _make_faq_repository([item])
+        primary = AsyncMock()
+        primary.find_best_match.return_value = MatchResult(
+            faq_item_id=1, categoria_id=1, resposta="Acesse a página de cadastro.", categoria="Conta", score=0.9
+        )
+        fuzzy = FuzzySimilarityService()
+        service = FallbackSimilarityService(primary, fuzzy)
+
+        result = await service.find_best_match("Como cadastro uma conta nova?", faq_repository)
+
+        assert result is not None
+        assert result.faq_item_id == 1
+        primary.find_best_match.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_degrada_para_fuzzy_quando_primary_lanca_api_error(self) -> None:
+        item = _make_faq_item(1, "Como cadastro uma conta nova?", "Acesse a página de cadastro.", "Conta")
+        faq_repository = _make_faq_repository([item])
+        primary = AsyncMock()
+        primary.find_best_match.side_effect = _make_api_error()
+        fuzzy = FuzzySimilarityService()
+        fuzzy._threshold = 0.5
+        service = FallbackSimilarityService(primary, fuzzy)
+
+        result = await service.find_best_match("Como cadastro uma conta nova?", faq_repository)
+
+        assert result is not None
+        assert result.faq_item_id == 1
+        assert result.score >= 0.5
+
+    @pytest.mark.asyncio
+    async def test_vector_for_degrada_para_fuzzy_quando_primary_lanca_api_error(self) -> None:
+        primary = AsyncMock()
+        primary.vector_for.side_effect = _make_api_error()
+        fuzzy = FuzzySimilarityService()
+        service = FallbackSimilarityService(primary, fuzzy)
+
+        result = await service.vector_for("Como cadastro uma conta nova?")
+
+        assert result == normalize_text("Como cadastro uma conta nova?")
