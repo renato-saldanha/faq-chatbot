@@ -33,18 +33,15 @@ class TestGetSummary:
         summary.taxa_sem_resposta = 0.2
         repo.get_summary.return_value = summary
         app.dependency_overrides[get_timeseries_metrics_repository] = lambda: repo
-        try:
-            client = TestClient(app)
-            response = client.get("/api/metrics/summary")
+        client = TestClient(app)
+        response = client.get("/api/metrics/summary")
 
-            assert response.status_code == 200
-            assert response.json() == {
-                "total_conversas": 10,
-                "total_sem_resposta": 2,
-                "taxa_sem_resposta": 0.2,
-            }
-        finally:
-            app.dependency_overrides.clear()
+        assert response.status_code == 200
+        assert response.json() == {
+            "total_conversas": 10,
+            "total_sem_resposta": 2,
+            "taxa_sem_resposta": 0.2,
+        }
 
 
 class TestGetTimeseries:
@@ -56,14 +53,11 @@ class TestGetTimeseries:
         daily.quantidade = 5
         repo.get_daily_series.return_value = [daily]
         app.dependency_overrides[get_timeseries_metrics_repository] = lambda: repo
-        try:
-            client = TestClient(app)
-            response = client.get("/api/metrics/timeseries")
+        client = TestClient(app)
+        response = client.get("/api/metrics/timeseries")
 
-            assert response.status_code == 200
-            assert response.json() == [{"data": "2026-08-01", "quantidade": 5}]
-        finally:
-            app.dependency_overrides.clear()
+        assert response.status_code == 200
+        assert response.json() == [{"data": "2026-08-01", "quantidade": 5}]
 
 
 class TestGetTopQuestions:
@@ -76,14 +70,11 @@ class TestGetTopQuestions:
         top.quantidade = 8
         repo.get_top_questions.return_value = [top]
         app.dependency_overrides[get_faq_metrics_repository] = lambda: repo
-        try:
-            client = TestClient(app)
-            response = client.get("/api/metrics/top-questions")
+        client = TestClient(app)
+        response = client.get("/api/metrics/top-questions")
 
-            assert response.status_code == 200
-            assert response.json() == [{"faq_item_id": 1, "pergunta": "Como cadastro?", "quantidade": 8}]
-        finally:
-            app.dependency_overrides.clear()
+        assert response.status_code == 200
+        assert response.json() == [{"faq_item_id": 1, "pergunta": "Como cadastro?", "quantidade": 8}]
 
 
 class TestGetCategories:
@@ -95,14 +86,11 @@ class TestGetCategories:
         breakdown.quantidade = 4
         repo.get_category_breakdown.return_value = [breakdown]
         app.dependency_overrides[get_faq_metrics_repository] = lambda: repo
-        try:
-            client = TestClient(app)
-            response = client.get("/api/metrics/categories")
+        client = TestClient(app)
+        response = client.get("/api/metrics/categories")
 
-            assert response.status_code == 200
-            assert response.json() == [{"categoria": "Conta", "quantidade": 4}]
-        finally:
-            app.dependency_overrides.clear()
+        assert response.status_code == 200
+        assert response.json() == [{"categoria": "Conta", "quantidade": 4}]
 
 
 class TestGetUnanswered:
@@ -115,13 +103,10 @@ class TestGetUnanswered:
         interacao.criado_em.isoformat.return_value = "2026-08-01T10:00:00"
         repo.get_unanswered.return_value = [interacao]
         app.dependency_overrides[get_interacao_repository] = lambda: repo
-        try:
-            client = TestClient(app)
-            response = client.get("/api/metrics/unanswered")
+        client = TestClient(app)
+        response = client.get("/api/metrics/unanswered")
 
-            assert response.status_code == 200
-            assert response.json() == [
-                {"id": 1, "pergunta_usuario": "pergunta esquisita", "criado_em": "2026-08-01T10:00:00"}
-            ]
-        finally:
-            app.dependency_overrides.clear()
+        assert response.status_code == 200
+        assert response.json() == [
+            {"id": 1, "pergunta_usuario": "pergunta esquisita", "criado_em": "2026-08-01T10:00:00"}
+        ]

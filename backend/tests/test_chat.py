@@ -33,46 +33,37 @@ def test_ask_com_match_retorna_200_e_resposta() -> None:
             score=0.95,
         )
     )
-    try:
-        client = TestClient(app)
-        response = client.post("/api/chat/ask", json={"pergunta": "Como cadastro uma conta?"})
+    client = TestClient(app)
+    response = client.post("/api/chat/ask", json={"pergunta": "Como cadastro uma conta?"})
 
-        assert response.status_code == 200
-        body = response.json()
-        assert body["resposta"] == "Acesse a página de cadastro."
-        assert body["sem_resposta"] is False
-        assert body["faq_item_id"] == 1
-    finally:
-        app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    assert body["resposta"] == "Acesse a página de cadastro."
+    assert body["sem_resposta"] is False
+    assert body["faq_item_id"] == 1
 
 
 def test_ask_sem_match_retorna_sem_resposta_true() -> None:
     _override_chat_service(
         ChatResponse(resposta="fallback", faq_item_id=None, categoria=None, sem_resposta=True, score=None)
     )
-    try:
-        client = TestClient(app)
-        response = client.post("/api/chat/ask", json={"pergunta": "pergunta sem relação nenhuma"})
+    client = TestClient(app)
+    response = client.post("/api/chat/ask", json={"pergunta": "pergunta sem relação nenhuma"})
 
-        assert response.status_code == 200
-        body = response.json()
-        assert body["sem_resposta"] is True
-        assert body["faq_item_id"] is None
-    finally:
-        app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    assert body["sem_resposta"] is True
+    assert body["faq_item_id"] is None
 
 
 def test_ask_pergunta_vazia_retorna_422() -> None:
     _override_chat_service(
         ChatResponse(resposta="fallback", faq_item_id=None, categoria=None, sem_resposta=True, score=None)
     )
-    try:
-        client = TestClient(app)
-        response = client.post("/api/chat/ask", json={"pergunta": "   "})
+    client = TestClient(app)
+    response = client.post("/api/chat/ask", json={"pergunta": "   "})
 
-        assert response.status_code == 422
-    finally:
-        app.dependency_overrides.clear()
+    assert response.status_code == 422
 
 
 def test_ask_sem_campo_pergunta_retorna_422() -> None:
@@ -84,15 +75,12 @@ def test_ask_sem_campo_pergunta_retorna_422() -> None:
 
 def test_ask_acima_do_limite_retorna_429() -> None:
     _override_chat_service(ChatResponse(resposta="ok", faq_item_id=1, categoria="Conta", sem_resposta=False, score=0.9))
-    try:
-        client = TestClient(app)
-        for _ in range(10):
-            response = client.post("/api/chat/ask", json={"pergunta": "Como cadastro uma conta?"})
-            assert response.status_code == 200
-
+    client = TestClient(app)
+    for _ in range(10):
         response = client.post("/api/chat/ask", json={"pergunta": "Como cadastro uma conta?"})
+        assert response.status_code == 200
 
-        assert response.status_code == 429
-        assert response.json() == {"detail": "Muitas requisições. Tente novamente em instantes."}
-    finally:
-        app.dependency_overrides.clear()
+    response = client.post("/api/chat/ask", json={"pergunta": "Como cadastro uma conta?"})
+
+    assert response.status_code == 429
+    assert response.json() == {"detail": "Muitas requisições. Tente novamente em instantes."}
