@@ -16,42 +16,33 @@ def _override_auth_service() -> AsyncMock:
 class TestRequestOtp:
     def test_retorna_200_authenticated_false(self) -> None:
         service = _override_auth_service()
-        try:
-            client = TestClient(app)
-            response = client.post("/api/auth/otp/request", json={"email": "admin@example.com"})
+        client = TestClient(app)
+        response = client.post("/api/auth/otp/request", json={"email": "admin@example.com"})
 
-            assert response.status_code == 200
-            assert response.json() == {"authenticated": False}
-            service.request_otp.assert_awaited_once_with("admin@example.com")
-        finally:
-            app.dependency_overrides.clear()
+        assert response.status_code == 200
+        assert response.json() == {"authenticated": False}
+        service.request_otp.assert_awaited_once_with("admin@example.com")
 
 
 class TestVerifyOtp:
     def test_codigo_valido_seta_cookie_e_retorna_200(self) -> None:
         service = _override_auth_service()
         service.verify_otp.return_value = "um-jwt-qualquer"
-        try:
-            client = TestClient(app)
-            response = client.post("/api/auth/otp/verify", json={"email": "admin@example.com", "codigo": "123456"})
+        client = TestClient(app)
+        response = client.post("/api/auth/otp/verify", json={"email": "admin@example.com", "codigo": "123456"})
 
-            assert response.status_code == 200
-            assert response.json() == {"authenticated": True}
-            assert "session" in response.cookies
-        finally:
-            app.dependency_overrides.clear()
+        assert response.status_code == 200
+        assert response.json() == {"authenticated": True}
+        assert "session" in response.cookies
 
     def test_codigo_invalido_retorna_401(self) -> None:
         service = _override_auth_service()
         service.verify_otp.return_value = None
-        try:
-            client = TestClient(app)
-            response = client.post("/api/auth/otp/verify", json={"email": "admin@example.com", "codigo": "000000"})
+        client = TestClient(app)
+        response = client.post("/api/auth/otp/verify", json={"email": "admin@example.com", "codigo": "000000"})
 
-            assert response.status_code == 401
-            assert "session" not in response.cookies
-        finally:
-            app.dependency_overrides.clear()
+        assert response.status_code == 401
+        assert "session" not in response.cookies
 
 
 class TestLogout:
