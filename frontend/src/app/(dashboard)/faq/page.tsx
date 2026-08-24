@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { Categoria, FaqItem } from "@/types/api";
@@ -20,6 +20,11 @@ export default function FaqAdminPage() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
+  const categoriaSelectRef = useRef<HTMLSelectElement>(null);
+
+  useEffect(() => {
+    if (showForm) categoriaSelectRef.current?.focus();
+  }, [showForm]);
 
   const faqItems = useQuery({
     queryKey: ["faq-items"],
@@ -100,9 +105,11 @@ export default function FaqAdminPage() {
             saveMutation.mutate(form);
           }}
         >
-          <label>
+          <label htmlFor="faq-categoria">
             Categoria
             <select
+              id="faq-categoria"
+              ref={categoriaSelectRef}
               value={form.categoria_id}
               onChange={(e) => setForm({ ...form, categoria_id: Number(e.target.value) })}
               required
@@ -115,21 +122,32 @@ export default function FaqAdminPage() {
               ))}
             </select>
           </label>
-          <label>
+          <label htmlFor="faq-pergunta">
             Pergunta
             <textarea
+              id="faq-pergunta"
               value={form.pergunta}
               onChange={(e) => setForm({ ...form, pergunta: e.target.value })}
               required
             />
           </label>
-          <label>
+          <label htmlFor="faq-resposta">
             Resposta
             <textarea
+              id="faq-resposta"
               value={form.resposta}
               onChange={(e) => setForm({ ...form, resposta: e.target.value })}
               required
             />
+          </label>
+          <label htmlFor="faq-ativo" className="faq-form-checkbox">
+            <input
+              id="faq-ativo"
+              type="checkbox"
+              checked={form.ativo}
+              onChange={(e) => setForm({ ...form, ativo: e.target.checked })}
+            />
+            Ativo (visível no chat)
           </label>
           <button type="submit" disabled={saveMutation.isPending}>
             Salvar
