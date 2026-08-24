@@ -49,7 +49,8 @@ frontend/
 ├── src/components/domain/         # chat-window, metric-card, timeseries-chart, category-breakdown-chart, login-form, verify-form
 ├── src/lib/api.ts                 # Cliente fetch fino, credentials:include
 ├── src/stores/auth-store.ts       # Zustand — estado de sessão do lado UI (fonte de verdade real é o cookie httpOnly)
-└── src/types/api.ts               # Contrato TS espelhando os schemas Pydantic do backend — única fonte de shape de request/response
+├── src/types/api.ts               # Contrato TS espelhando os schemas Pydantic do backend — única fonte de shape de request/response
+└── e2e/                           # Testes Playwright (auth.setup.ts, chat/login/dashboard/rate-limit .spec.ts, helpers/) — rodam em CI, ver "Testes E2E"
 
 docker-compose.yml   # postgres (pgvector) + backend + frontend
 .env.example          # Todas as vars — nunca commitar .env com valor real
@@ -83,7 +84,8 @@ docker-compose.yml   # postgres (pgvector) + backend + frontend
 - **Telas do chat público (`/`) são para o usuário final, que pode não ter instrução técnica — a experiência precisa ser fluida sem exigir familiaridade com jargão de sistema.** Ao escrever ou revisar UI dessa área: erros de rede/API não podem ficar só num toast passageiro — o estado de falha precisa ficar visível no próprio elemento afetado (ex: a bolha da pergunta que falhou), porque quem não é técnico não necessariamente associa um toast a "minha última ação falhou". Telas vazias sem contexto (`"Faça uma pergunta para começar"` sozinho) não ajudam quem não sabe o que o sistema cobre — dar exemplos/sugestões de ação como ponto de partida. Qualquer navegação para a área administrativa (`/login`) deve usar linguagem que fale com quem trabalha ali ("Painel interno"), nunca termos de sistema como "admin"/"dashboard"/"OTP" expostos ao usuário final — e ficar visualmente separada do fluxo principal (ex: botão no canto, não misturado ao conteúdo do chat). O painel admin (`/faq`, `/metricas`), por outro lado, pode usar linguagem mais técnica — é usado por quem opera o sistema, não pelo cliente final.
 - **Erro de API sempre diferenciado por status quando a mensagem ao usuário depende disso.** `lib/api.ts` exporta `ApiError` (com `status`) em vez de lançar `Error` genérico — um `catch`/`onError` que precisa reagir diferente a 429/401/etc. faz `error instanceof ApiError && error.status === X`, nunca parseia a mensagem de texto. Isso existe porque, com o rate limit do chat (`/api/chat/ask`, 10/min), tratar erro genericamente fazia a UI sugerir "tente de novo agora" exatamente no caso em que reenviar na hora ia falhar de novo — mensagem enganosa. Ao adicionar novo endpoint com múltiplos status de erro relevantes pro usuário, seguir esse padrão em vez de voltar a generalizar.
 - **Toda tela que lista dado de múltiplas queries (`useQuery`) precisa expor erro de forma visível, não só sucesso/vazio.** `metricas/page.tsx` originalmente não checava `isError` em nenhuma das 5 queries — falha de rede/sessão expirada renderizava como "sem dados", indistinguível de dado real vazio. Padrão: agregar `isError` das queries relevantes num banner (`role="alert"`) visível no topo da página.
-- **Mudança visual/de comportamento de UI (novo toast, novo estado de erro, novo elemento de formulário) precisa de validação visual real antes de considerar a tarefa concluída, não só o teste Vitest passando.** Vitest confirma que a lógica dispara (ex: `toast.error` foi chamado com o texto certo), mas não confirma que o elemento renderiza legível, no lugar certo, sem quebrar layout. `@playwright/test` já é dependência do frontend (`package.json`) — rodar um script headless ad-hoc (`chromium.launch({headless:true})`, screenshot do estado relevante) contra a stack Docker real (`docker compose up --build`, depois `node script.mjs` de dentro de `frontend/` para o Node resolver `node_modules`) é o padrão para essa validação. Não existe suíte Playwright versionada no projeto (decisão consciente, ver seção de decisões de escopo) — isso é smoke test manual pontual, não E2E automatizado em CI.
+- **Mudança visual/de comportamento de UI (novo toast, novo estado de erro, novo elemento de formulário) precisa de validação visual real antes de considerar a tarefa concluída, não só o teste Vitest passando.** Vitest confirma que a lógica dispara (ex: `toast.error` foi chamado com o texto certo), mas não confirma que o elemento renderiza legível, no lugar certo, sem quebrar layout. Para uma mudança pontual, um script headless ad-hoc (`chromium.launch({headless:true})`, screenshot do estado relevante) contra a stack Docker real continua válido; para um fluxo completo (login, CRUD, chat), estender a suíte versionada em `frontend/e2e/` (ver "Testes E2E" abaixo) é preferível a um script descartável.
+- **Testes E2E versionados em `frontend/e2e/`** (Playwright, `frontend/playwright.config.ts`), rodando em CI (`ci.yml`, job `e2e`) a cada push/PR contra `docker compose` real. `auth.setup.ts` autentica uma única vez como admin e persiste `storageState` (`e2e/.auth/admin.json`, gitignored) — specs autenticados (`dashboard.spec.ts`) reaproveitam essa sessão em vez de logar de novo, porque o `OtpStore` tem rate limit de 3 pedidos de código/15min (ver seção de auth do backend) e logar em todo teste estouraria esse limite. O código OTP em si é lido do log do container backend (`docker compose logs backend`, `e2e/helpers/otp.ts`) — só funciona sem `SMTP_HOST` configurado (é o caso do `.env.example`/CI; contra um `.env` real com SMTP configurado, o código vai por e-mail de verdade e a suíte não consegue lê-lo). O teste que estoura de propósito o rate limit do chat (`/api/chat/ask`, 10/min) fica isolado em `zz-chat-rate-limit.spec.ts` — prefixo força ordem de execução por último, pra não poluir o IP compartilhado pelos testes anteriores que dependem do chat responder normalmente. `workers: 1`/`fullyParallel: false` no config por causa desse compartilhamento de rate limit entre specs de auth.
 
 ## Comandos
 
@@ -113,6 +115,10 @@ npm run test
 npm run lint
 npx tsc --noEmit
 
+# E2E (requer stack Docker de pé, docker compose up --build)
+cd frontend
+npx playwright test          # .env sem SMTP_HOST — senão o OTP vai por e-mail real e o auth.setup.ts não encontra o código no log
+
 # Migrations
 cd backend
 alembic revision --autogenerate -m "descrição"
@@ -139,8 +145,8 @@ alembic upgrade head
 ## Decisões de escopo (ver histórico de commits)
 
 - **PRD §5 — 3 protótipos de similaridade (fuzzy/embedding/híbrido) implementados e avaliados**, selecionáveis via `SIMILARITY_BACKEND`. Gabarito (`scripts/similarity_eval_dataset.json` + `scripts/eval_similarity.py`, 21 casos) rodado contra os 3 backends reais (API OpenAI real, não mock): fuzzy 76.2%, **embedding 100% após calibração (vencedor pela regra do PRD — maior acurácia)**, hybrid 81.0%. Resultado bruto em `docs/similarity_eval_output.txt`, tabela e análise no README.
-- **CI/CD ativo** (`.github/workflows/ci.yml`) — lint/typecheck/test de backend e frontend + build do Docker Compose, em todo push/PR. Sem branch protection configurada, então o merge continua manual mesmo com gates rodando.
-- **Sem testes E2E automatizados em CI** (Playwright/Cypress) — cobertura é unitária (backend, 73 testes) e de componente (frontend, 33 testes via Vitest); smoke test manual foi rodado ad-hoc contra o container Docker real (via curl) após as mudanças de similaridade/segurança/frontend desta sessão, não como suíte automatizada no CI.
+- **CI/CD ativo** (`.github/workflows/ci.yml`) — lint/typecheck/test de backend e frontend + build do Docker Compose + suíte E2E (job `e2e`, ver abaixo), em todo push/PR. Sem branch protection configurada, então o merge continua manual mesmo com gates rodando.
+- **Testes E2E automatizados em CI** (Playwright, PR #24) — cobertura unitária (backend, 76 testes) e de componente (frontend, 33 testes via Vitest) mais 9 testes ponta a ponta em `frontend/e2e/` contra a stack Docker real (chat público, login OTP, CRUD de FAQ, métricas), rodando no job `e2e` a cada push/PR. Detalhe de implementação (storageState compartilhado, leitura de OTP do log, isolamento do teste de rate limit) na seção "Testes E2E" acima.
 
 ## Decisões de design — implementação dos 3 protótipos de similaridade (PRD §5)
 
