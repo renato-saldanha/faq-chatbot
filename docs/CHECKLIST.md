@@ -2,7 +2,7 @@
 
 Estado real do projeto contra as 12 Partes do `PLANO_IMPLEMENTACAO.md`, cruzado com commits, testes e o smoke test manual desta sessão — não com relatório de sessão anterior.
 
-**Status atual:** 12/12 partes completas.
+**Status atual:** 12/12 partes completas + suíte E2E automatizada em CI (PR #24).
 
 ## Feito e validado
 
@@ -51,10 +51,10 @@ Estado real do projeto contra as 12 Partes do `PLANO_IMPLEMENTACAO.md`, cruzado 
   - *Segunda rodada (telas restantes — login-form, verify-form, faq/page):* achado real, não de acessibilidade — o formulário de FAQ não tinha controle de UI para o campo `ativo`, então não havia como reativar/desativar uma pergunta pela tela. Corrigido com checkbox dedicado; foco automático no primeiro campo e labels `htmlFor`/`id` explícito aplicados junto. 1 teste novo, suíte frontend total: 33/33.
   - *Smoke test pós-mudanças contra o container Docker real* (rebuild completo, `curl`): threshold recalibrado confirmado no caso mais difícil da calibração (score 0.59), rate limit do chat estourando em `429`, payload grande rejeitado com `422`.
 
-## Fora do escopo desta entrega (decisão consciente)
+- [x] **Testes E2E automatizados em CI.** 9 testes Playwright contra a stack Docker real (`frontend/e2e/`), cobrindo os fluxos críticos e erros: chat público (pergunta cadastrada, `sem_resposta`, rate limit 429), login OTP (guard do dashboard, código inválido, código válido lido do log do backend) e painel admin (CRUD de FAQ ponta a ponta refletindo no chat, métricas, logout). `auth.setup.ts` autentica uma única vez e reaproveita `storageState` entre os specs autenticados, evitando estourar os rate limits do `OtpStore` (3 pedidos/15min). `ci.yml`: job `docker-build` substituído por `e2e`, que sobe `docker compose` de verdade (`.env` de `.env.example`, backend `fuzzy`) e roda a suíte a cada push/PR — fecha a lacuna que antes era "fora do escopo". Ver PR #24.
 
-- [~] **Testes E2E.** Playwright rodado ad-hoc nesta sessão para smoke tests manuais, não integrado como suíte automatizada em CI.
+- [x] **Checklist final do PRD §4.** Critérios de avaliação (qualidade/organização do código, arquitetura, organização do projeto, UX/UI, performance, boas práticas, tratamento de erros e validações, documentação) conferidos verbatim contra o `.docx` original — texto extraído diretamente do arquivo, sem gap em relação ao que o `PRD.md` já mapeava.
 
 ## Pendente
 
-- Checklist final do PRD §4 — conferir cada critério de avaliação verbatim do enunciado antes de considerar encerrado.
+Nenhum item pendente.

@@ -163,7 +163,8 @@ frontend/
 ├── src/components/domain/         # chat-window, metric-card, timeseries-chart, category-breakdown-chart, login-form, verify-form
 ├── src/lib/api.ts                 # Cliente fetch fino, credentials:include
 ├── src/stores/auth-store.ts       # Zustand — estado de sessão do lado UI
-└── src/types/api.ts               # Contrato TS espelhando os schemas Pydantic do backend
+├── src/types/api.ts               # Contrato TS espelhando os schemas Pydantic do backend
+└── e2e/                           # 9 testes Playwright — ver "Testes E2E" abaixo
 
 docker-compose.yml   # postgres (pgvector) + backend + frontend
 .env.example          # Todas as vars — nunca commitar .env com valor real
@@ -202,6 +203,10 @@ cd frontend
 npx tsc --noEmit
 npm run lint
 npm run test          # 33 passed
+
+# E2E (Playwright, requer a stack de pé via docker compose up --build)
+cd frontend
+npx playwright test   # 9 passed
 ```
 
 ## Segurança
@@ -247,8 +252,16 @@ Dois itens do PRD/Plano interno nunca implementados e descartados (não exigidos
 
 Validado com 3 testes novos (fallback) + suíte reorganizada, backend total: 76/76.
 
-## Fora do escopo desta entrega (decisões conscientes)
+## Testes E2E
 
-- **Sem testes E2E** (Playwright/Cypress) como suíte automatizada em CI.
+Suíte Playwright (`frontend/e2e/`, PR #24) rodando contra a stack Docker real, cobrindo os fluxos críticos e casos de erro:
 
-CI/CD ativo em `.github/workflows/ci.yml` (GitHub Actions) — lint, typecheck e testes de backend e frontend, mais build do Docker Compose, em todo push/PR na `master`. Sem branch protection configurada, então nada bloqueia merge automaticamente hoje — os gates rodam e reportam, mas o merge continua manual.
+- **Chat público:** pergunta cadastrada retorna a resposta da base; pergunta fora da base retorna `sem_resposta`; estourar o rate limit (10/min) mostra o erro específico de 429 na bolha da pergunta.
+- **Login OTP:** guard do dashboard redireciona quem não está autenticado; código inválido é rejeitado; login com o código real (lido do log do backend, já que sem `SMTP_HOST` configurado o `AuthService` loga o código em vez de enviar e-mail) chega ao painel.
+- **Painel admin:** CRUD de FAQ ponta a ponta — criar, aparecer na tabela, refletir na resposta do chat público, excluir; métricas carregam sem erro; logout bloqueia o acesso.
+
+`auth.setup.ts` autentica como admin uma única vez e persiste a sessão (`storageState`), reaproveitada pelos specs que precisam estar autenticados — evita estourar o rate limit de pedido de OTP (3/15min) fazendo login em cada teste. 9 testes no total, rodando em CI a cada push/PR (job `e2e` em `.github/workflows/ci.yml`).
+
+## CI/CD
+
+`.github/workflows/ci.yml` (GitHub Actions), três jobs em todo push/PR na `master`: `backend` (lint, typecheck, 76 testes), `frontend` (lint, typecheck, 33 testes, build do Next.js) e `e2e` (sobe `docker compose` real e roda a suíte Playwright acima). Sem branch protection configurada, então nada bloqueia merge automaticamente hoje — os gates rodam e reportam, mas o merge continua manual.
