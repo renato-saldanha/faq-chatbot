@@ -48,9 +48,17 @@ export default function MetricasPage() {
     queryFn: () => api.get<UnansweredQuestion[]>(`/api/metrics/unanswered${qs}`),
   });
 
+  const hasError = [summary, timeseries, topQuestions, categories, unanswered].some((q) => q.isError);
+
   return (
     <div>
       <h1>Métricas</h1>
+
+      {hasError && (
+        <p className="metrics-error" role="alert">
+          Não foi possível carregar todas as métricas. Tente recarregar a página.
+        </p>
+      )}
 
       <div className="date-filter">
         <label>
