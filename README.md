@@ -201,7 +201,7 @@ ruff check . && mypy app/  # ambos limpos
 cd frontend
 npx tsc --noEmit
 npm run lint
-npm run test          # 32 passed
+npm run test          # 33 passed
 ```
 
 ## Segurança
@@ -228,6 +228,10 @@ Três problemas reais corrigidos:
 - **Dashboard de métricas sem tratamento de erro.** As 5 queries (`useQuery`) não verificavam `isError` — se qualquer endpoint falhasse (rede, sessão expirada), a tela mostrava silenciosamente "—" ou "Sem dados no período", indistinguível de "não há dados de verdade". Corrigido com um banner (`role="alert"`) quando qualquer métrica falha ao carregar.
 
 Validado com 3 testes novos (`chat-window.test.tsx`, `metricas/page.test.tsx`), suíte frontend total: 32/32.
+
+Segunda rodada, cobrindo as telas restantes (`login-form.tsx`, `verify-form.tsx`, `faq/page.tsx`, guard de sessão): confirmado exclusão com confirmação real (`window.confirm`), botões de ação acessíveis por padrão (`<button>` com texto visível, sem necessidade de `aria-label` extra). Um achado real — não de acessibilidade, uma lacuna funcional: o formulário de FAQ tinha o campo `ativo` no estado interno (usado para desativar uma pergunta sem excluí-la) mas **nenhum controle de UI para editá-lo** — não havia como reativar/desativar uma pergunta pela tela. Corrigido com um checkbox "Ativo (visível no chat)"; aproveitado para também adicionar foco automático no primeiro campo ao abrir o formulário e padronizar labels com `htmlFor`/`id` explícito. Suíte frontend total: 33/33.
+
+Smoke test manual contra o container Docker real (rebuild completo, `curl`) confirmando as mudanças da sessão em conjunto: paráfrase mais difícil da calibração de similaridade (`"Quero falar com uma pessoa..."`) respondendo corretamente com o threshold recalibrado (score 0.59), rate limit do chat estourando em `429` após 10 requisições, payload acima de 1000 caracteres rejeitado com `422`.
 
 ## Fora do escopo desta entrega (decisões conscientes)
 
