@@ -1,14 +1,17 @@
+import logging
 import re
 import unicodedata
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from openai import AsyncOpenAI
+from openai import APIError, AsyncOpenAI
 from rapidfuzz import fuzz
 
 from app.config import get_settings
 from app.models import FaqItem
 from app.repositories.faq_repository import FaqRepository
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -197,3 +200,30 @@ class HybridSimilarityService(SimilarityService):
         if norm_a == 0.0 or norm_b == 0.0:
             return 0.0
         return dot / (norm_a * norm_b)
+
+
+class FallbackSimilarityService(SimilarityService):
+    """Envolve um backend que depende da API OpenAI (embedding/hybrid) e degrada para fuzzy se ela falhar.
+
+    Falha de rede, timeout, rate limit ou chave inválida (openai.APIError e
+    subclasses) não devem derrubar o chat — melhor responder com o backend
+    mais fraco (fuzzy) do que retornar 500 pro usuário final.
+    """
+
+    def __init__(self, primary: SimilarityService, fuzzy: FuzzySimilarityService) -> None:
+        self._primary = primary
+        self._fuzzy = fuzzy
+
+    async def vector_for(self, texto: str) -> object:
+        try:
+            return await self._primary.vector_for(texto)
+        except APIError:
+            logger.warning("Falha na API OpenAI em vector_for, usando fallback fuzzy", exc_info=True)
+            return await self._fuzzy.vector_for(texto)
+
+    async def find_best_match(self, pergunta: str, faq_repository: FaqRepository) -> MatchResult | None:
+        try:
+            return await self._primary.find_best_match(pergunta, faq_repository)
+        except APIError:
+            logger.warning("Falha na API OpenAI em find_best_match, usando fallback fuzzy", exc_info=True)
+            return await self._fuzzy.find_best_match(pergunta, faq_repository)

@@ -14,6 +14,7 @@ from app.repositories.interacao_repository import InteracaoRepository
 from app.services.chat_service import ChatResponse, ChatService
 from app.services.similarity_service import (
     EmbeddingSimilarityService,
+    FallbackSimilarityService,
     FuzzySimilarityService,
     HybridSimilarityService,
     SimilarityService,
@@ -30,10 +31,11 @@ def get_similarity_service() -> SimilarityService:
         return FuzzySimilarityService()
     if backend == "embedding":
         client = AsyncOpenAI(api_key=get_settings().openai_api_key)
-        return EmbeddingSimilarityService(client)
+        return FallbackSimilarityService(EmbeddingSimilarityService(client), FuzzySimilarityService())
     if backend == "hybrid":
         client = AsyncOpenAI(api_key=get_settings().openai_api_key)
-        return HybridSimilarityService(FuzzySimilarityService(), EmbeddingSimilarityService(client))
+        hybrid = HybridSimilarityService(FuzzySimilarityService(), EmbeddingSimilarityService(client))
+        return FallbackSimilarityService(hybrid, FuzzySimilarityService())
     raise ValueError(f"SIMILARITY_BACKEND inválido: {backend!r}")
 
 
