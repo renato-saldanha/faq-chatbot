@@ -152,7 +152,7 @@ backend/
 ├── alembic/                     # Migrations (extensão pgvector + 3 tabelas)
 ├── scripts/seed_faq.py           # Seed idempotente, rodado automaticamente no boot
 ├── scripts/eval_similarity.py    # Gabarito de similaridade — ver "Decisão" acima
-├── tests/                        # 73 testes (services/repositories + rotas HTTP), sem depender de Postgres real
+├── tests/                        # 76 testes (services/repositories + rotas HTTP), sem depender de Postgres real
 └── Dockerfile
 
 frontend/
@@ -177,7 +177,7 @@ Detalhes de arquitetura e convenções de código: `CLAUDE.md` na raiz.
 
 - **Camadas em cadeia unidirecional:** `api/` (rota FastAPI) → `services/` (regra de negócio) → `repositories/` (acesso a dados) → `models/` (SQLAlchemy). Cada camada só conhece a de baixo — nenhuma rota acessa modelo direto, nenhum repository conhece service.
 - **Repository Pattern** (`app/repositories/`) — cada repository (`FaqRepository`, `InteracaoRepository`, `TimeseriesMetricsRepository`, `FaqMetricsRepository`) isola toda a query SQLAlchemy da tabela correspondente; services nunca montam `select(...)` diretamente.
-- **Strategy Pattern** (`app/services/similarity_service.py`) — `SimilarityService` é uma interface abstrata (`find_best_match`, `vector_for`) com três implementações (`FuzzySimilarityService`, `EmbeddingSimilarityService`, `HybridSimilarityService`, selecionadas via `SIMILARITY_BACKEND`); o `ChatService` e o restante do código dependem só da interface, nunca da classe concreta.
+- **Strategy Pattern** (`app/services/similarity_service.py`) — `SimilarityService` é uma interface abstrata (`find_best_match`, `vector_for`) com três implementações (`FuzzySimilarityService`, `EmbeddingSimilarityService`, `HybridSimilarityService`, selecionadas via `SIMILARITY_BACKEND`) mais um decorator (`FallbackSimilarityService`, envolve `embedding`/`hybrid` e degrada para `fuzzy` se a API da OpenAI falhar); o `ChatService` e o restante do código dependem só da interface, nunca da classe concreta.
 - **Dependency Injection via constructor + FastAPI `Depends()`:** nenhuma classe instancia sua própria dependência (`self.x = AlgumaCoisa()` é proibido pela convenção do projeto). Repository recebe `AsyncSession` no `__init__`; service recebe repository(s)/outros services no `__init__`; a rota resolve a árvore inteira via `Depends(get_chat_service)` (ver `app/api/chat.py`). Isso é o que torna os services testáveis com fakes, sem subir Postgres real nos testes.
 - **DTO explícito entre camadas:** `MatchResult`, `ChatResponse`, `MetricsSummary` são `@dataclass(frozen=True)` — estruturas imutáveis internas que nunca vazam para o Pydantic de resposta HTTP sem conversão explícita na rota. Pydantic (`BaseModel`) fica reservado para I/O de API (validação de request/response).
 
@@ -194,7 +194,7 @@ Detalhes de arquitetura e convenções de código: `CLAUDE.md` na raiz.
 ```bash
 # Backend
 cd backend
-pytest tests/ -v          # 73 passed
+pytest tests/ -v          # 76 passed
 ruff check . && mypy app/  # ambos limpos
 
 # Frontend
@@ -232,6 +232,20 @@ Validado com 3 testes novos (`chat-window.test.tsx`, `metricas/page.test.tsx`), 
 Segunda rodada, cobrindo as telas restantes (`login-form.tsx`, `verify-form.tsx`, `faq/page.tsx`, guard de sessão): confirmado exclusão com confirmação real (`window.confirm`), botões de ação acessíveis por padrão (`<button>` com texto visível, sem necessidade de `aria-label` extra). Um achado real — não de acessibilidade, uma lacuna funcional: o formulário de FAQ tinha o campo `ativo` no estado interno (usado para desativar uma pergunta sem excluí-la) mas **nenhum controle de UI para editá-lo** — não havia como reativar/desativar uma pergunta pela tela. Corrigido com um checkbox "Ativo (visível no chat)"; aproveitado para também adicionar foco automático no primeiro campo ao abrir o formulário e padronizar labels com `htmlFor`/`id` explícito. Suíte frontend total: 33/33.
 
 Smoke test manual contra o container Docker real (rebuild completo) confirmando as mudanças da sessão em conjunto: via `curl` — paráfrase mais difícil da calibração de similaridade (`"Quero falar com uma pessoa..."`) respondendo corretamente com o threshold recalibrado (score 0.59), rate limit do chat estourando em `429` após 10 requisições, payload acima de 1000 caracteres rejeitado com `422`. Via Playwright headless (script ad-hoc, não suíte versionada) — confirmação visual: a mesma paráfrase renderizada na tela, `aria-label` presente no input, o toast de rate limit aparecendo com a mensagem específica de `429` (não a genérica), e o guard de sessão redirecionando `/metricas` sem login para `/login`.
+
+## Revisão de código dirigida (`pr-review-linus`)
+
+O projeto tem um skill de review (`.claude/skills/pr-review-linus/`) pensado para rodar antes de um merge, comparando o diff contra `docs/PRD.md`/`docs/PLANO_IMPLEMENTACAO.md` — nunca tinha sido usado porque o projeto não segue fluxo de PR (commits diretos em `master`). Rodado pela primeira vez contra todo o diff acumulado da sessão (backend e frontend separados), veredicto **SHIP** nos dois — zero showstopper.
+
+Achados reais corrigidos:
+
+- **Fallback automático para `fuzzy` quando a API da OpenAI falha.** Já estava previsto desde o plano de implementação original e nunca tinha sido codificado: com `SIMILARITY_BACKEND=embedding`/`hybrid`, qualquer falha da API (timeout, rate limit, chave inválida) derrubava o chat inteiro no 500 genérico, em vez de degradar para o backend sem dependência externa. `FallbackSimilarityService` envolve o backend primário e captura `openai.APIError` (e subclasses) em `find_best_match`/`vector_for`, delegando para `fuzzy` com log de aviso.
+- **Duplicação de `try/finally: app.dependency_overrides.clear()`** em 10+ testes de rota HTTP — um arquivo já resolvia isso com fixture `autouse`, os outros três não. Consolidado em `conftest.py`, isolamento entre testes agora é estrutural, não por convenção manual repetida.
+- **Bolha de erro do chat não diferenciava 429** mesmo depois do toast já ter sido corrigido — meio problema resolvido antes. `Message.erro` (string, calculada uma vez em `onError`) substitui o antigo `Message.falhou` (boolean), eliminando a duplicação de lógica que causava a inconsistência.
+
+Dois itens do PRD/Plano interno nunca implementados e descartados (não exigidos pelo enunciado original do desafio, confirmado contra o `.docx`): `ClusteringService` (agrupar perguntas sem resposta por tema — D3 já está 100% atendido na forma de lista simples) e limiar adaptativo de similaridade (margem relativa ao segundo colocado — threshold absoluto já atinge 100% no gabarito, com margem empírica de 0.20-0.25 nos casos válidos). Menções removidas do PRD/Plano; `Interacao.embedding` permanece no schema (nullable, sem custo) em vez de gerar uma migration só para remover a coluna.
+
+Validado com 3 testes novos (fallback) + suíte reorganizada, backend total: 76/76.
 
 ## Fora do escopo desta entrega (decisões conscientes)
 
