@@ -12,6 +12,44 @@ Requisitos completos: `docs/PRD.md`. Plano de implementação original: `docs/PL
 - **Auth do admin:** OTP por e-mail + JWT em cookie httpOnly — single-admin via `ADMIN_EMAIL`
 - **Conteinerização:** Docker (`docker-compose.yml` na raiz — postgres + backend + frontend)
 
+## Arquitetura
+
+```
+frontend (Next.js 14, :3000)
+    |
+    |  HTTP + cookie httpOnly JWT  --->
+    |  <---  JSON  ---
+    v
+backend (FastAPI, :8000)
+    |
+    |  SQLAlchemy async  --->
+    |  <---  resultado  ---
+    v
+postgres + pgvector (:5432)
+```
+
+Dois fluxos de requisição bem separados — o chat é público, tudo o mais exige sessão:
+
+```
+Chat (público, sem login)
+  usuário digita pergunta
+    → POST /api/chat/ask  [rate limit 10/min por IP, slowapi]
+      → ChatService.ask()
+        → SimilarityService.find_best_match()   [fuzzy | embedding | hybrid, ver "Decisão" abaixo]
+          → FaqRepository (query no Postgres / pgvector cosine_distance)
+        → InteracaoRepository.create()          [grava a interação, com ou sem match]
+      ← resposta + score  (ou sem_resposta:true se nada bateu o threshold)
+
+Admin (login OTP obrigatório)
+  e-mail + código OTP
+    → POST /api/auth/otp/verify → cookie httpOnly (JWT, HS256)
+  toda rota /api/faq/* e /api/metrics/* exige o cookie
+    → require_admin_session (app/api/_deps.py) valida o JWT antes de qualquer coisa
+      → FaqRepository (CRUD da base) | FaqMetricsRepository / TimeseriesMetricsRepository (dashboard)
+```
+
+Camadas do backend, sempre nessa ordem — nenhuma pula a de baixo: `api/` (rota FastAPI) → `services/` (regra de negócio) → `repositories/` (única fronteira de acesso a dados/SQL) → `models/` (SQLAlchemy). Detalhe completo de cada padrão (Strategy, DTO, DI) na seção "Padrões de arquitetura" abaixo; convenções de código em `CLAUDE.md`.
+
 ## Como rodar
 
 ```bash
