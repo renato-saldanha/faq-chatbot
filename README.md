@@ -201,7 +201,7 @@ ruff check . && mypy app/  # ambos limpos
 cd frontend
 npx tsc --noEmit
 npm run lint
-npm run test          # 29 passed
+npm run test          # 32 passed
 ```
 
 ## Segurança
@@ -216,6 +216,18 @@ Dois problemas reais foram encontrados e corrigidos:
 Ambos validados com testes automatizados (`test_chat.py::test_ask_acima_do_limite_retorna_429`, `test_auth_service.py::test_otp_store_bloqueia_brute_force_de_verificacao`) e contra o container Docker real.
 
 **Aceito como escopo do desafio** (não corrigido, por não se aplicar ao contexto de projeto local/avaliação): `JWT_SECRET_KEY` com default fraco documentado ("trocar em produção"), sem CSP/security headers adicionais, credenciais do Postgres hardcoded no `docker-compose.yml` (infraestrutura local isolada em container).
+
+## Frontend — auditoria de código e acessibilidade
+
+Cobrindo tratamento de erro visível ao usuário, acessibilidade (labels, foco, feedback de estado) e aderência aos padrões documentados (client HTTP centralizado, componentes apresentacionais, design tokens). Confirmado: nenhum componente chama `fetch` fora de `lib/api.ts`, zero uso de `any`, `:focus-visible`/`prefers-reduced-motion` respeitados globalmente, `dangerouslySetInnerHTML` só em script estático (sem risco de XSS).
+
+Três problemas reais corrigidos:
+
+- **Erro de API nunca diferenciado por status.** `lib/api.ts` sempre lançava um `Error` genérico — nenhuma tela distinguia 429/401/404/422. Com o rate limit novo no chat, isso significava mostrar "toque em Enviar para tentar de novo" exatamente quando reenviar na hora ia continuar falhando por até 1 minuto — mensagem ativamente enganosa. Corrigido com uma classe `ApiError` (expõe `status`) em `lib/api.ts`; `chat-window.tsx` agora mostra "Muitas perguntas em pouco tempo. Aguarde um instante..." especificamente para 429.
+- **Input do chat sem label acessível.** Só tinha `placeholder`, sem `aria-label`/`label` associado — leitor de tela não anuncia o propósito do campo de forma confiável. Corrigido com `aria-label="Digite sua pergunta"`.
+- **Dashboard de métricas sem tratamento de erro.** As 5 queries (`useQuery`) não verificavam `isError` — se qualquer endpoint falhasse (rede, sessão expirada), a tela mostrava silenciosamente "—" ou "Sem dados no período", indistinguível de "não há dados de verdade". Corrigido com um banner (`role="alert"`) quando qualquer métrica falha ao carregar.
+
+Validado com 3 testes novos (`chat-window.test.tsx`, `metricas/page.test.tsx`), suíte frontend total: 32/32.
 
 ## Fora do escopo desta entrega (decisões conscientes)
 

@@ -47,6 +47,8 @@ Estado real do projeto contra as 12 Partes do `PLANO_IMPLEMENTACAO.md`, cruzado 
 
 - [x] **Auditoria de segurança dedicada.** JWT, cookie de sessão, SQL injection, XSS, CORS, autorização, segredos e dependências — sem achado crítico (detalhe no `README.md`, seção "Segurança"). Dois problemas reais corrigidos: (1) `/api/chat/ask` sem rate limit — rota pública que aciona chamada de billing real à OpenAI (backends `embedding`/`hybrid`), corrigida com `slowapi` (10/min por IP) + `max_length=1000` na pergunta; (2) brute-force do código OTP — rate limit existia só para pedir código novo, não para tentativas de verificação, corrigido com um segundo limite em `OtpStore` (5 tentativas/15min). 2 testes de regressão novos, suíte total: 73/73.
 
+- [x] **Auditoria de código e acessibilidade do frontend.** Único lado do projeto sem revisão dedicada até então. Confirmado: client HTTP 100% centralizado, sem `any`, foco visível e `prefers-reduced-motion` respeitados. Três problemas reais corrigidos: (1) erro de API nunca diferenciado por status — com o rate limit novo do chat, isso fazia a UI sugerir retry imediato num caso (429) que precisa esperar até 1 minuto; corrigido com uma classe `ApiError` tipada e mensagem específica para 429; (2) input do chat sem `aria-label`; (3) dashboard de métricas sem tratamento de erro visível (`isError` das 5 queries ignorado), corrigido com banner `role="alert"`. 3 testes novos, suíte frontend total: 32/32.
+
 ## Fora do escopo desta entrega (decisão consciente)
 
 - [~] **Testes E2E.** Playwright rodado ad-hoc nesta sessão para smoke tests manuais, não integrado como suíte automatizada em CI.
