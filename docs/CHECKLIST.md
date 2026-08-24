@@ -1,0 +1,60 @@
+# Checklist de entrega — Chatbot de FAQ com Dashboard Analítico
+
+Estado real do projeto contra as 12 Partes do `PLANO_IMPLEMENTACAO.md`, cruzado com commits, testes e o smoke test manual desta sessão — não com relatório de sessão anterior.
+
+**Status atual:** 12/12 partes completas + suíte E2E automatizada em CI (PR #24).
+
+## Feito e validado
+
+- [x] **Parte 0 — Scaffolding e infraestrutura.** Backend FastAPI + Frontend Next.js estruturados. `docker-compose.yml` com postgres + backend + frontend. Entrypoint roda migration + seed antes do uvicorn. `docker compose up --build` validado de ponta a ponta.
+
+- [x] **Parte 1 — Modelo de dados e base de conhecimento.** Models `Categoria`/`FaqItem`/`Interacao` + migration inicial. CRUD REST completo de FAQ, testado via UI real. Seed idempotente — 50 perguntas em 6 categorias.
+  - *Corrigido hoje:* FK de `interacao` sem `ondelete` bloqueava exclusão de qualquer FAQ já perguntada no chat.
+
+- [x] **Parte 3 — Fluxo do chatbot.** `ChatService.ask()` com match, fallback e gravação de interação. `POST /api/chat/ask` respondendo corretamente via smoke test. Pergunta sem match retorna `sem_resposta: true`.
+  - *Corrigido hoje:* crash `MissingGreenlet` ao ler `categoria` — trocado `join()` por `selectinload()`.
+
+- [x] **Parte 4 — Interface de chat.** Chat público em `/`, sem login. Loading, badge de "sem resposta", integração TanStack Query. Testado ponta a ponta com Playwright headless.
+  - *Corrigido hoje:* `app/page.tsx` duplicava a rota `/` já servida pelo route group `(chat)` — quebrava o build estático.
+
+- [x] **Parte 5 — Métricas agregadas.** Resumo, série temporal, top perguntas, categoria, sem-resposta. Endpoints em `/api/metrics/*`, protegidos por sessão.
+
+- [x] **Parte 6 — Autenticação do painel admin.** OTP 6 dígitos + JWT em cookie httpOnly, single-admin. Fluxo completo testado: pedir código → ler no log → validar → sessão ativa.
+  - *Corrigido hoje:* guard do dashboard redirecionava para `/login` mesmo autenticado — Zustand `persist` lido antes da hidratação terminar.
+
+- [x] **Parte 7 — Dashboard.** Cards de KPI, série temporal, breakdown por categoria (Recharts). Carrega sem crash, protegido por sessão — confirmado no smoke test.
+
+- [x] **Parte 8 — Administração da base de conhecimento.** Criar → aparece na tabela → reflete no chat, testado ponta a ponta. Excluir FAQ já perguntada — confirmado funcionando após o fix de FK.
+
+- [x] **Parte 9 — Testes de frontend.** 28 testes Vitest + Testing Library cobrindo `chat-window` (8), gráficos `timeseries`/`category-breakdown` (4), `login-form`/`verify-form` (8), CRUD de `faq/page` (7), mais o placeholder original. Escritos em 4 agentes paralelos, cada um em worktree isolada, integrados via 5 PRs (#19-#23) revisados e mesclados. Infra de teste compartilhada extraída para `vitest.setup.ts` (cleanup automático + `ResizeObserver` stub) e `src/lib/test-utils.tsx` (`renderWithClient`) durante a integração, eliminando duplicação entre os PRs.
+
+- [x] **Parte 10 — Polimento, erros e performance.** Bug real corrigido: `.data-table` com `display:block` quebrava o layout de colunas HTML em mobile (coluna "Ativo"/"Ações" cortada e ilegível) — trocado por wrapper `.table-scroll` com scroll horizontal real, validado em 375/768/1440px via Playwright headless. Redesign visual com paleta neutra + verde/terracota como cores de dado (skills `frontend-design`/`dataviz`, cor validada via `validate_palette.js`, pesquisa de psicologia de cores para contexto de suporte), Fraunces + Inter, tema claro/escuro completo, focus-visible e `prefers-reduced-motion` em todos os controles. Paginação nas listagens não implementada — volume do seed (50 itens) não justifica ainda.
+
+- [x] **Parte 11 — Documentação e entrega.** `README.md` com setup, env vars, decisão de similaridade, estrutura. Commits organizados por unidade lógica, enviados ao GitHub. `/code-review high` rodado sobre o diff inicial — sem achados.
+
+- [x] **CI/CD.** `ci.yml` reativado (estava quebrado — usava pnpm, projeto usa npm) e validado com run real do GitHub Actions passando (backend + frontend + docker-build). Gate de review por IA (`pr-review.yml`) removido — não fazia parte do escopo pedido.
+
+- [x] **Parte 2 — Protótipos de similaridade (implementação completa dos 3, PRD §5).** `FuzzySimilarityService`, `EmbeddingSimilarityService` e `HybridSimilarityService` implementados atrás da mesma interface `SimilarityService`, selecionáveis via `SIMILARITY_BACKEND`. Gabarito (`scripts/eval_similarity.py`, 21 casos) rodado contra os 3 backends reais (API OpenAI real): fuzzy 76.2%, **embedding 100% após calibração (vencedor)**, hybrid 81.0%. Resultado bruto em `docs/similarity_eval_output.txt`, tabela e decisão no `README.md`.
+  - *Bug real corrigido nesta etapa:* `HybridSimilarityService.find_best_match` fazia `if item.embedding` para checar presença de embedding — `item.embedding` é `numpy.ndarray` (via pgvector), e `bool()` de array multi-elemento levanta `ValueError`. Só apareceu ao rodar contra o Postgres real (mock de teste usava `list`, que mascarava o bug). Corrigido para `is not None`; teste de regressão adicionado usando `numpy.array` para reproduzir o tipo real.
+  - *Calibração 90.5% → 100%:* diagnóstico caso a caso das 2 falhas (não ajuste cego). Item ambíguo do seed reescrito (`"Esqueci meu login, o que fazer?"` sobrepunha semanticamente com recuperação de senha) e `SIMILARITY_THRESHOLD` recalibrado de `0.6` para `0.55` (verificado contra o teto real dos casos `sem_match`, ~0.30, sem risco de falso positivo). Ver `docs/similarity_eval_output.txt` seção "RODADA DE CALIBRAÇÃO" e `CLAUDE.md`.
+
+- [x] **Auditoria de aderência ao enunciado original (`.docx`).** Duas auditorias independentes (agentes separados, sem contexto prévio): (1) os 15 itens do enunciado (5 chatbot + 6 dashboard + 4 técnicos) verificados contra o código real (rotas, componentes, docker-compose), não contra documentação própria — **100% conforme**, com evidência arquivo:linha para cada item; (2) estrutura/arquitetura do codebase avaliada de forma independente — achado real: as 3 classes de `SimilarityService` acessavam `AsyncSession`/`select(...)` diretamente, reimplementando (triplicando) a mesma query que já existia em `FaqRepository.list_all()`, e chamavam `session.commit()` direto do service.
+  - *Corrigido:* `SimilarityService.find_best_match` agora recebe `FaqRepository` (não `AsyncSession`); query de listagem, busca por distância de cosseno (`find_nearest_by_embedding`) e persistência de embedding (`save_embeddings`) centralizadas no repository. `HybridSimilarityService`/`EmbeddingSimilarityService` não tocam mais SQL. `get_faq_repository` consolidado em `app/api/_deps.py` (estava duplicado em `faq.py`, reimplementado de novo em `chat.py`).
+  - *Também corrigido:* exception handler global no FastAPI (`app/main.py`) — antes, qualquer erro não previsto (fora do que já tinha `HTTPException` específica) caía no 500 cru do Starlette sem log nem formato de resposta consistente.
+  - 8 testes novos (repository + handler global), suíte total 47/47 verde, gabarito de similaridade revalidado em 100% (21/21) após a refatoração.
+
+- [x] **Testes de rota HTTP** (`test_chat.py`, `test_faq.py`, `test_metrics.py`, `test_auth.py`) — a lacuna de cobertura identificada na auditoria de estrutura (só services/repositories eram testados, nenhuma rota `api/*.py` diretamente). 24 testes via `TestClient` + `app.dependency_overrides`, cobrindo status code, serialização de resposta, 401 sem sessão nas rotas protegidas, 404/422 e o cookie httpOnly do login. Suíte total: 71/71.
+
+- [x] **Auditoria de segurança dedicada.** JWT, cookie de sessão, SQL injection, XSS, CORS, autorização, segredos e dependências — sem achado crítico (detalhe no `README.md`, seção "Segurança"). Dois problemas reais corrigidos: (1) `/api/chat/ask` sem rate limit — rota pública que aciona chamada de billing real à OpenAI (backends `embedding`/`hybrid`), corrigida com `slowapi` (10/min por IP) + `max_length=1000` na pergunta; (2) brute-force do código OTP — rate limit existia só para pedir código novo, não para tentativas de verificação, corrigido com um segundo limite em `OtpStore` (5 tentativas/15min). 2 testes de regressão novos, suíte total: 73/73.
+
+- [x] **Auditoria de código e acessibilidade do frontend.** Único lado do projeto sem revisão dedicada até então. Confirmado: client HTTP 100% centralizado, sem `any`, foco visível e `prefers-reduced-motion` respeitados. Três problemas reais corrigidos: (1) erro de API nunca diferenciado por status — com o rate limit novo do chat, isso fazia a UI sugerir retry imediato num caso (429) que precisa esperar até 1 minuto; corrigido com uma classe `ApiError` tipada e mensagem específica para 429; (2) input do chat sem `aria-label`; (3) dashboard de métricas sem tratamento de erro visível (`isError` das 5 queries ignorado), corrigido com banner `role="alert"`. 3 testes novos, suíte frontend total: 32/32.
+  - *Segunda rodada (telas restantes — login-form, verify-form, faq/page):* achado real, não de acessibilidade — o formulário de FAQ não tinha controle de UI para o campo `ativo`, então não havia como reativar/desativar uma pergunta pela tela. Corrigido com checkbox dedicado; foco automático no primeiro campo e labels `htmlFor`/`id` explícito aplicados junto. 1 teste novo, suíte frontend total: 33/33.
+  - *Smoke test pós-mudanças contra o container Docker real* (rebuild completo, `curl`): threshold recalibrado confirmado no caso mais difícil da calibração (score 0.59), rate limit do chat estourando em `429`, payload grande rejeitado com `422`.
+
+- [x] **Testes E2E automatizados em CI.** 9 testes Playwright contra a stack Docker real (`frontend/e2e/`), cobrindo os fluxos críticos e erros: chat público (pergunta cadastrada, `sem_resposta`, rate limit 429), login OTP (guard do dashboard, código inválido, código válido lido do log do backend) e painel admin (CRUD de FAQ ponta a ponta refletindo no chat, métricas, logout). `auth.setup.ts` autentica uma única vez e reaproveita `storageState` entre os specs autenticados, evitando estourar os rate limits do `OtpStore` (3 pedidos/15min). `ci.yml`: job `docker-build` substituído por `e2e`, que sobe `docker compose` de verdade (`.env` de `.env.example`, backend `fuzzy`) e roda a suíte a cada push/PR — fecha a lacuna que antes era "fora do escopo". Ver PR #24.
+
+- [x] **Checklist final do PRD §4.** Critérios de avaliação (qualidade/organização do código, arquitetura, organização do projeto, UX/UI, performance, boas práticas, tratamento de erros e validações, documentação) conferidos verbatim contra o `.docx` original — texto extraído diretamente do arquivo, sem gap em relação ao que o `PRD.md` já mapeava.
+
+## Pendente
+
+Nenhum item pendente.

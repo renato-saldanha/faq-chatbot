@@ -47,25 +47,7 @@ jobs:
       - name: pytest
         if: steps.detect.outputs.exists == 'true'
         working-directory: backend
-        env:
-          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/faq_chatbot_test
-          SIMILARITY_BACKEND: fuzzy
-          SIMILARITY_THRESHOLD: "0.6"
         run: pytest -v
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: faq_chatbot_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
   frontend:
     name: frontend (lint + typecheck + test + build)
@@ -76,39 +58,35 @@ jobs:
       - name: Detect frontend/
         id: detect
         run: echo "exists=$([ -f frontend/package.json ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-      - uses: pnpm/action-setup@v4
-        if: steps.detect.outputs.exists == 'true'
-        with:
-          version: 10
       - uses: actions/setup-node@v4
         if: steps.detect.outputs.exists == 'true'
         with:
           node-version: "20"
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-      - name: pnpm install
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: npm ci
         if: steps.detect.outputs.exists == 'true'
         working-directory: frontend
-        run: pnpm install --frozen-lockfile
+        run: npm ci --no-audit --no-fund
       - name: lint
         if: steps.detect.outputs.exists == 'true'
         working-directory: frontend
-        run: pnpm lint
+        run: npm run lint
       - name: typecheck
         if: steps.detect.outputs.exists == 'true'
         working-directory: frontend
-        run: pnpm typecheck
+        run: npm run typecheck
       - name: test
         if: steps.detect.outputs.exists == 'true'
         working-directory: frontend
-        run: pnpm test
+        run: npm run test
       - name: build
         if: steps.detect.outputs.exists == 'true'
         working-directory: frontend
-        run: pnpm build
+        run: npm run build
 
-  docker-build:
-    name: docker compose build
+  e2e:
+    name: e2e (docker compose + playwright)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -116,6 +94,49 @@ jobs:
       - name: Detect docker-compose.yml
         id: detect
         run: echo "exists=$([ -f docker-compose.yml ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v4
+        if: steps.detect.outputs.exists == 'true'
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: npm ci (frontend, para o Playwright)
+        if: steps.detect.outputs.exists == 'true'
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund
+      - name: Install Playwright chromium
+        if: steps.detect.outputs.exists == 'true'
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Prepara .env (backend fuzzy, sem segredo externo)
+        if: steps.detect.outputs.exists == 'true'
+        run: cp .env.example .env
       - name: docker compose build
         if: steps.detect.outputs.exists == 'true'
         run: docker compose build
+      - name: docker compose up -d
+        if: steps.detect.outputs.exists == 'true'
+        run: docker compose up -d
+      - name: Aguarda backend/frontend saudáveis
+        if: steps.detect.outputs.exists == 'true'
+        run: |
+          until curl -sf http://localhost:8000/health && curl -sf http://localhost:3000 >/dev/null; do
+            sleep 3
+          done
+      - name: playwright test
+        if: steps.detect.outputs.exists == 'true'
+        working-directory: frontend
+        run: npx playwright test
+      - name: Logs do backend em caso de falha
+        if: failure() && steps.detect.outputs.exists == 'true'
+        run: docker compose logs backend
+      - name: Upload do relatório Playwright
+        if: failure() && steps.detect.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
+      - name: docker compose down
+        if: always() && steps.detect.outputs.exists == 'true'
+        run: docker compose down -v
