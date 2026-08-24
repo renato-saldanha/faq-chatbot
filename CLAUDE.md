@@ -139,7 +139,7 @@ alembic upgrade head
 
 - **PRD §5 — 3 protótipos de similaridade (fuzzy/embedding/híbrido) implementados e avaliados**, selecionáveis via `SIMILARITY_BACKEND`. Gabarito (`scripts/similarity_eval_dataset.json` + `scripts/eval_similarity.py`, 21 casos) rodado contra os 3 backends reais (API OpenAI real, não mock): fuzzy 76.2%, **embedding 100% após calibração (vencedor pela regra do PRD — maior acurácia)**, hybrid 81.0%. Resultado bruto em `docs/similarity_eval_output.txt`, tabela e análise no README.
 - **CI/CD ativo** (`.github/workflows/ci.yml`) — lint/typecheck/test de backend e frontend + build do Docker Compose, em todo push/PR. Sem branch protection configurada, então o merge continua manual mesmo com gates rodando.
-- **Sem testes E2E automatizados em CI** (Playwright/Cypress) — cobertura é unitária (backend, 73 testes) e de componente (frontend, 32 testes via Vitest); smoke test manual via Playwright headless é usado ad-hoc em validação, não como suíte no CI.
+- **Sem testes E2E automatizados em CI** (Playwright/Cypress) — cobertura é unitária (backend, 73 testes) e de componente (frontend, 33 testes via Vitest); smoke test manual foi rodado ad-hoc contra o container Docker real (via curl) após as mudanças de similaridade/segurança/frontend desta sessão, não como suíte automatizada no CI.
 
 ## Decisões de design — implementação dos 3 protótipos de similaridade (PRD §5)
 
