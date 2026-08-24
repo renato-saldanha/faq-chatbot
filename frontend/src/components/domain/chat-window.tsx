@@ -10,8 +10,11 @@ interface Message {
   role: "user" | "bot";
   text: string;
   semResposta?: boolean;
-  falhou?: boolean;
+  erro?: string;
 }
+
+const ERRO_RATE_LIMIT = "Muitas perguntas em pouco tempo. Aguarde um instante antes de tentar de novo.";
+const ERRO_GENERICO = "Não foi possível enviar. Toque em Enviar para tentar de novo.";
 
 const SUGESTOES = [
   "Como recupero minha senha?",
@@ -32,19 +35,17 @@ export function ChatWindow() {
       ]);
     },
     onError: (error) => {
+      const mensagemErro =
+        error instanceof ApiError && error.status === 429 ? ERRO_RATE_LIMIT : ERRO_GENERICO;
       setMessages((prev) => {
         const next = [...prev];
         const lastUserIndex = next.map((m) => m.role).lastIndexOf("user");
         if (lastUserIndex !== -1) {
-          next[lastUserIndex] = { ...next[lastUserIndex], falhou: true };
+          next[lastUserIndex] = { ...next[lastUserIndex], erro: mensagemErro };
         }
         return next;
       });
-      if (error instanceof ApiError && error.status === 429) {
-        toast.error("Muitas perguntas em pouco tempo. Aguarde um instante antes de tentar de novo.");
-      } else {
-        toast.error("Não foi possível enviar sua pergunta. Toque em Enviar para tentar de novo.");
-      }
+      toast.error(mensagemErro);
     },
   });
 
@@ -86,7 +87,7 @@ export function ChatWindow() {
           <div key={i} className={`chat-bubble chat-bubble-${m.role}`}>
             {m.semResposta && <span className="chat-badge">Sem resposta encontrada</span>}
             <p>{m.text}</p>
-            {m.falhou && <span className="chat-bubble-error">Não foi possível enviar</span>}
+            {m.erro && <span className="chat-bubble-error">{m.erro}</span>}
           </div>
         ))}
         {mutation.isPending && <div className="chat-bubble chat-bubble-bot chat-typing">Digitando...</div>}

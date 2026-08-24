@@ -122,14 +122,14 @@ describe("ChatWindow", () => {
 
     await waitFor(() => {
       expect(mockedToastError).toHaveBeenCalledWith(
-        "Não foi possível enviar sua pergunta. Toque em Enviar para tentar de novo.",
+        "Não foi possível enviar. Toque em Enviar para tentar de novo.",
       );
     });
     expect(screen.getByText("Pergunta que vai falhar")).toBeInTheDocument();
-    expect(screen.getByText("Não foi possível enviar")).toBeInTheDocument();
+    expect(screen.getByText("Não foi possível enviar. Toque em Enviar para tentar de novo.")).toBeInTheDocument();
   });
 
-  it("mostra mensagem específica de rate limit quando a API retorna 429", async () => {
+  it("mostra mensagem específica de rate limit no toast e na bolha quando a API retorna 429", async () => {
     mockedApi.post.mockRejectedValueOnce(new ApiError(429, "Muitas requisições"));
 
     renderChatWindow();
@@ -140,6 +140,9 @@ describe("ChatWindow", () => {
         "Muitas perguntas em pouco tempo. Aguarde um instante antes de tentar de novo.",
       );
     });
+    expect(
+      screen.getByText("Muitas perguntas em pouco tempo. Aguarde um instante antes de tentar de novo."),
+    ).toBeInTheDocument();
   });
 
   it("desabilita input e botão enquanto o envio está pendente", async () => {
