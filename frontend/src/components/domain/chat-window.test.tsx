@@ -2,12 +2,15 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { api } from "@/lib/api";
+import { ApiError, api } from "@/lib/api";
 import { renderWithClient } from "@/lib/test-utils";
 import type { ChatAskResponse } from "@/types/api";
 import { ChatWindow } from "./chat-window";
 
-vi.mock("@/lib/api");
+vi.mock("@/lib/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api")>();
+  return { ...actual, api: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() } };
+});
 vi.mock("sonner");
 
 const mockedApi = vi.mocked(api);
@@ -124,6 +127,19 @@ describe("ChatWindow", () => {
     });
     expect(screen.getByText("Pergunta que vai falhar")).toBeInTheDocument();
     expect(screen.getByText("Não foi possível enviar")).toBeInTheDocument();
+  });
+
+  it("mostra mensagem específica de rate limit quando a API retorna 429", async () => {
+    mockedApi.post.mockRejectedValueOnce(new ApiError(429, "Muitas requisições"));
+
+    renderChatWindow();
+    await askQuestion("Pergunta enviada rápido demais");
+
+    await waitFor(() => {
+      expect(mockedToastError).toHaveBeenCalledWith(
+        "Muitas perguntas em pouco tempo. Aguarde um instante antes de tentar de novo.",
+      );
+    });
   });
 
   it("desabilita input e botão enquanto o envio está pendente", async () => {

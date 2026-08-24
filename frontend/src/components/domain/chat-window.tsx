@@ -3,7 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import type { ChatAskResponse } from "@/types/api";
 
 interface Message {
@@ -31,7 +31,7 @@ export function ChatWindow() {
         { role: "bot", text: data.resposta, semResposta: data.sem_resposta },
       ]);
     },
-    onError: () => {
+    onError: (error) => {
       setMessages((prev) => {
         const next = [...prev];
         const lastUserIndex = next.map((m) => m.role).lastIndexOf("user");
@@ -40,7 +40,11 @@ export function ChatWindow() {
         }
         return next;
       });
-      toast.error("Não foi possível enviar sua pergunta. Toque em Enviar para tentar de novo.");
+      if (error instanceof ApiError && error.status === 429) {
+        toast.error("Muitas perguntas em pouco tempo. Aguarde um instante antes de tentar de novo.");
+      } else {
+        toast.error("Não foi possível enviar sua pergunta. Toque em Enviar para tentar de novo.");
+      }
     },
   });
 
@@ -93,6 +97,7 @@ export function ChatWindow() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Digite sua pergunta..."
+          aria-label="Digite sua pergunta"
           className="chat-input"
           disabled={mutation.isPending}
         />
