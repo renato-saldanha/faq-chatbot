@@ -197,6 +197,35 @@ describe("FaqAdminPage", () => {
     expect(api.post).not.toHaveBeenCalled();
   });
 
+  it('checkbox "Ativo" reflete o item ao editar e permite desativar via PUT', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.put).mockResolvedValue({} as FaqItem);
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Como resetar minha senha?")).toBeInTheDocument();
+    });
+
+    const row = getRowByPergunta("Como resetar minha senha?");
+    await user.click(within(row).getByRole("button", { name: "Editar" }));
+
+    const ativoCheckbox = screen.getByLabelText("Ativo (visível no chat)") as HTMLInputElement;
+    expect(ativoCheckbox.checked).toBe(true);
+
+    await user.click(ativoCheckbox);
+    expect(ativoCheckbox.checked).toBe(false);
+
+    await user.click(screen.getByRole("button", { name: "Salvar" }));
+
+    await waitFor(() => {
+      expect(api.put).toHaveBeenCalledWith(
+        "/api/faq/10",
+        expect.objectContaining({ ativo: false }),
+      );
+    });
+  });
+
   it('clicar em "Excluir" com window.confirm retornando true chama api.delete', async () => {
     const user = userEvent.setup();
     vi.spyOn(window, "confirm").mockReturnValue(true);

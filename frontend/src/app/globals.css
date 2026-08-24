@@ -698,6 +698,17 @@ h2 {
   border-color: var(--primary);
 }
 
+.faq-form label.faq-form-checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.faq-form-checkbox input[type="checkbox"] {
+  width: auto;
+  padding: 0;
+}
+
 .faq-form button {
   align-self: flex-start;
   padding: 9px 18px;
