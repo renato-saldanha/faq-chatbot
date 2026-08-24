@@ -29,7 +29,7 @@ Resultado esperado: automatizar o atendimento de dúvidas recorrentes + fornecer
 |---|---|---|
 | D1 | Quantidade total de consultas realizadas | `COUNT(*)` de interações no período filtrado |
 | D2 | Perguntas mais frequentes | Top-N por texto normalizado (ou por FAQ vinculada) |
-| D3 | Perguntas sem resposta cadastrada | Lista/contagem de interações com `sem_resposta=true` — mesma fonte de C5, vista do lado dashboard. Quando `SIMILARITY_BACKEND` inclui embedding (protótipo B ou C), agrupadas por similaridade (clustering) para expor temas recorrentes ainda não cobertos pela base; com `SIMILARITY_BACKEND=fuzzy`, o `ClusteringService` cai para agrupamento por trigram sobre o texto normalizado — mesma interface, sem perder a funcionalidade (ver §7) |
+| D3 | Perguntas sem resposta cadastrada | Lista/contagem de interações com `sem_resposta=true` — mesma fonte de C5, vista do lado dashboard |
 | D4 | Distribuição de consultas por categoria | `GROUP BY categoria` — exige que toda pergunta da base tenha categoria (C1) |
 | D5 | Evolução das consultas ao longo do tempo | Série diária de contagem de interações |
 | D6 | Indicadores e gráficos para análise | Cards de KPI + gráficos (linha para D5, barra/pizza para D4, tabela para D2/D3) |
@@ -59,7 +59,6 @@ Construir **três protótipos comparáveis** antes de decidir o definitivo:
 
 Refinamentos aplicados sobre o(s) protótipo(s) selecionado(s):
 - **Normalização de texto antes de vetorizar**: lowercase, remoção de acentuação/pontuação, antes de gerar o embedding — reduz ruído e permite cache de embedding por hash do texto normalizado (evita recalcular para a mesma pergunta recorrente).
-- **Limiar adaptativo em vez de fixo**: aceitar o melhor candidato não só por um `SIMILARITY_THRESHOLD` absoluto, mas também por margem relativa ao segundo colocado — evita aceitar um match fraco quando nada realmente parecido existe na base, e evita rejeitar um match bom em domínios onde o score absoluto tende a ser baixo.
 
 **Critério de escolha — objetivo, não subjetivo:** um gabarito fixo de ~20 perguntas de teste (`scripts/similarity_eval_dataset.json`), cada uma com o `faq_item_id` esperado como resposta (ou `null` para as propositalmente sem match, testando C5). Composição do gabarito: ~10 perguntas próximas ao texto original da FAQ (caso fácil), ~5 paráfrases com vocabulário diferente (testa força do protótipo B/C), ~5 com erros de digitação (testa força do protótipo A). Rodar os três protótipos contra o mesmo gabarito e medir:
 - **Acurácia** = (nº de respostas que batem com o `faq_item_id` esperado) / 20.
@@ -83,10 +82,10 @@ faq_item
 
 interacao
   id, pergunta_usuario, faq_item_id (FK, nullable), categoria_id (nullable, snapshot),
-  score_similaridade, sem_resposta (bool), embedding (vector, nullable), criado_em
+  score_similaridade, sem_resposta (bool), embedding (vector, nullable — coluna existe no schema, não utilizada), criado_em
 ```
 
-`interacao.faq_item_id` nullable + `sem_resposta` cobre C5/D3 na mesma tabela — não precisa de entidade separada para "perguntas sem resposta". `interacao.embedding` guarda o vetor da pergunta do usuário quando o backend semântico está ativo, reaproveitado depois para o clustering de perguntas sem resposta (D3) sem recalcular. `ClusteringService` nunca acessa esse campo diretamente — depende de `SimilarityService.vector_for(texto)` (ver §7), que cada estratégia implementa com sua própria noção de "vetor" (embedding real ou representação em trigramas), garantindo que D3 funcione com qualquer `SIMILARITY_BACKEND`.
+`interacao.faq_item_id` nullable + `sem_resposta` cobre C5/D3 na mesma tabela — não precisa de entidade separada para "perguntas sem resposta". `interacao.embedding` foi provisionada para um agrupamento por similaridade de perguntas sem resposta que decidimos não implementar (não exigido pelo enunciado original — D3 já está atendido na forma de lista simples); a coluna permanece no schema (nullable, sem custo) em vez de gerar uma migration só para removê-la.
 
 ## 7. Arquitetura
 
@@ -102,7 +101,6 @@ backend/ (FastAPI)
 ├── services/
 │   ├── similarity_service.py   # interface SimilarityService + 3 estratégias (fuzzy/embedding/híbrida)
 │   ├── chat_service.py         # orquestra busca + registro de interação
-│   ├── clustering_service.py   # agrupa perguntas sem resposta por similaridade (D3)
 │   └── auth_service.py         # gera/valida OTP, emite JWT — single-admin via ADMIN_EMAIL
 ├── repositories/
 │   ├── faq_repository.py
@@ -129,19 +127,9 @@ docker-compose.yml   # postgres + backend + frontend
 
 ### 7.1 Injeção de dependência
 
-Nenhum service ou repository instancia suas próprias dependências. `Categoria`/`FaqItem`/`Interacao` repositories recebem a sessão de banco via `Depends(get_db_session)`; `ChatService` e `ClusteringService` recebem `SimilarityService` e os repositórios de que precisam pelo construtor, resolvidos por `Depends(...)` nas rotas do FastAPI (padrão nativo do framework — sem necessidade de container de DI externo). Isso é o que torna os services testáveis isoladamente com repositórios/estratégias fake nos testes da Parte 3.
+Nenhum service ou repository instancia suas próprias dependências. `Categoria`/`FaqItem`/`Interacao` repositories recebem a sessão de banco via `Depends(get_db_session)`; `ChatService` recebe `SimilarityService` e os repositórios de que precisa pelo construtor, resolvidos por `Depends(...)` nas rotas do FastAPI (padrão nativo do framework — sem necessidade de container de DI externo). Isso é o que torna os services testáveis isoladamente com repositórios/estratégias fake nos testes da Parte 3.
 
-### 7.2 Dependência declarada — `ClusteringService` → `SimilarityService`
-
-D3 (perguntas sem resposta agrupadas por tema) depende de uma noção de "distância entre perguntas", que só existe dentro de `SimilarityService`. Para não acoplar o clustering a um backend específico, a interface expõe um método adicional:
-
-```
-SimilarityService.vector_for(texto: str) -> Vector
-```
-
-Cada estratégia implementa `vector_for` com sua própria representação — embedding real nos protótipos B/C, vetor esparso de trigramas no protótipo A. `ClusteringService` consome só essa interface, nunca a coluna `interacao.embedding` diretamente, então D3 funciona corretamente qualquer que seja o `SIMILARITY_BACKEND` escolhido ao final da Parte 2.
-
-### 7.3 Métricas divididas por tipo de consulta
+### 7.2 Métricas divididas por tipo de consulta
 
 O que era um único `MetricsRepository` acumulando 5 responsabilidades de leitura foi dividido em dois repositórios menores por afinidade de consulta: `FaqMetricsRepository` (D2 perguntas mais frequentes, D4 distribuição por categoria — ambos agregam sobre `faq_item`/categoria) e `TimeseriesMetricsRepository` (D1 total, D5 série diária — agregam sobre `interacao` por período). `get_unanswered` (D3) vive em `InteractionRepository`, já que é uma listagem filtrada de `Interacao`, não uma agregação nova.
 

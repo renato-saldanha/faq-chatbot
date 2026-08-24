@@ -64,7 +64,7 @@ Cada achado: severidade × categoria.
 [ ] Cada concern cita seção do PRD/Parte do plano/linha de código, não opinião solta?
 [ ] Cláusula temporal aplicada antes de flagar como violação?
 [ ] Veredicto bate com a severidade real (nem inflado, nem suavizado)?
-[ ] Se o diff mexe em SimilarityService/ClusteringService: a fronteira do PRD §7.2 (vector_for como único ponto de acesso) foi checada linha a linha, não só "parece certo"?
+[ ] Se o diff mexe em SimilarityService: a fronteira do PRD (SimilarityService como única fronteira de acesso a "quão parecida é uma pergunta" — nenhum outro código lê embedding/compara texto direto) foi checada linha a linha, não só "parece certo"?
 [ ] Se o diff mexe em rota sob /api/faq ou /api/metrics: confirmei presença de require_admin_session?
 ```
 
@@ -82,7 +82,7 @@ Cada achado: severidade × categoria.
 ✅ "Falta teste de `ChatService.ask` para o caso de falha do embedding (Parte 3, critério de saída explícito) — caminho crítico sem cobertura."
 
 ❌ "Código não está limpo." → sem critério.
-✅ "`ClusteringService` lê `interacao.embedding` direto em vez de `SimilarityService.vector_for()` — quebra a fronteira do PRD §7.2, acopla o clustering ao backend `embedding`/`hybrid`."
+✅ "`ChatService` lê `FaqItem.embedding` direto em vez de passar por `SimilarityService.find_best_match()` — quebra a fronteira documentada no CLAUDE.md, acopla o service ao backend `embedding`/`hybrid`."
 
 ❌ Nitpick de espaço/import → ruff cobre, não reporte aqui.
 
