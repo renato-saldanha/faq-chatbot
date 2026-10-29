@@ -48,7 +48,7 @@ Admin (login OTP obrigatório)
       → FaqRepository (CRUD da base) | FaqMetricsRepository / TimeseriesMetricsRepository (dashboard)
 ```
 
-Camadas do backend, sempre nessa ordem — nenhuma pula a de baixo: `api/` (rota FastAPI) → `services/` (regra de negócio) → `repositories/` (única fronteira de acesso a dados/SQL) → `models/` (SQLAlchemy). Detalhe completo de cada padrão (Strategy, DTO, DI) na seção "Padrões de arquitetura" abaixo; convenções de código em `CLAUDE.md`.
+Camadas do backend, sempre nessa ordem — nenhuma pula a de baixo: `api/` (rota FastAPI) → `services/` (regra de negócio) → `repositories/` (única fronteira de acesso a dados/SQL) → `models/` (SQLAlchemy). Detalhe completo de cada padrão (Strategy, DTO, DI) na seção "Padrões de arquitetura" abaixo; convenções de código em `docs/ARQUITETURA.md`.
 
 ## Como rodar
 
@@ -170,7 +170,7 @@ docker-compose.yml   # postgres (pgvector) + backend + frontend
 .env.example          # Todas as vars — nunca commitar .env com valor real
 ```
 
-Detalhes de arquitetura e convenções de código: `CLAUDE.md` na raiz.
+Detalhes de arquitetura e convenções de código: `docs/ARQUITETURA.md`.
 
 ## Padrões de arquitetura
 
@@ -238,9 +238,9 @@ Segunda rodada, cobrindo as telas restantes (`login-form.tsx`, `verify-form.tsx`
 
 Smoke test manual contra o container Docker real (rebuild completo) confirmando as mudanças da sessão em conjunto: via `curl` — paráfrase mais difícil da calibração de similaridade (`"Quero falar com uma pessoa..."`) respondendo corretamente com o threshold recalibrado (score 0.59), rate limit do chat estourando em `429` após 10 requisições, payload acima de 1000 caracteres rejeitado com `422`. Via Playwright headless (script ad-hoc, não suíte versionada) — confirmação visual: a mesma paráfrase renderizada na tela, `aria-label` presente no input, o toast de rate limit aparecendo com a mensagem específica de `429` (não a genérica), e o guard de sessão redirecionando `/metricas` sem login para `/login`.
 
-## Revisão de código dirigida (`pr-review-linus`)
+## Revisão de código dirigida
 
-O projeto tem um skill de review (`.claude/skills/pr-review-linus/`) pensado para rodar antes de um merge, comparando o diff contra `docs/PRD.md`/`docs/PLANO_IMPLEMENTACAO.md` — nunca tinha sido usado porque o projeto não segue fluxo de PR (commits diretos em `master`). Rodado pela primeira vez contra todo o diff acumulado da sessão (backend e frontend separados), veredicto **SHIP** nos dois — zero showstopper.
+O diff acumulado do projeto (backend e frontend separados) foi revisado contra `docs/PRD.md`/`docs/PLANO_IMPLEMENTACAO.md`. Como o projeto não segue fluxo de PR (commits diretos em `master`), a revisão rodou sobre o diff inteiro de uma vez. Veredicto **SHIP** nos dois — zero showstopper.
 
 Achados reais corrigidos:
 

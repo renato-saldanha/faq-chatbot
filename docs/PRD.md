@@ -162,12 +162,12 @@ Fora de escopo desta decisão: múltiplos admins, recuperação de conta, "lembr
 
 ## 11. Gate de review automatizado (CI) — mecanismo e evidência de execução
 
-O workflow `pr-review.yml` roda um agente (`.claude/agents/pr-reviewer.md`) contra cada PR e bloqueia o merge se houver achado de severidade Showstopper (branch protection exige o check `automated review` verde, `enforce_admins: true` sem exceção).
+O workflow `pr-review.yml` roda um agente de revisão contra cada PR e bloqueia o merge se houver achado de severidade Showstopper (branch protection exige o check `automated review` verde, `enforce_admins: true` sem exceção).
 
-**Formato de saída do agente:** texto simples terminando em uma linha literal `VEREDICTO: SHIP_CLEAN|SHIP|FIX_AND_RESUBMIT`, com linhas `SHOWSTOPPER: ...`/`CONCERN: ...` para achados — não JSON estruturado. A flag `--json-schema` da action (`anthropics/claude-code-action@v1`) foi tentada e descartada: em testes reais, a action não propagava o schema para o SDK (`is_error: true` instantâneo, sem chamada de modelo), então o parsing é feito por regex sobre o texto de resposta, extraído do `execution_file` (output documentado da action) via `jq`.
+**Formato de saída do agente:** texto simples terminando em uma linha literal `VEREDICTO: SHIP_CLEAN|SHIP|FIX_AND_RESUBMIT`, com linhas `SHOWSTOPPER: ...`/`CONCERN: ...` para achados — não JSON estruturado. A flag `--json-schema` da action de revisão foi tentada e descartada: em testes reais, a action não propagava o schema para o SDK (`is_error: true` instantâneo, sem chamada de modelo), então o parsing é feito por regex sobre o texto de resposta, extraído do `execution_file` (output documentado da action) via `jq`.
 
 **Evidência de execução — comentário na PR, não arquivo versionado.** O resultado do review é postado como comentário na própria PR (`gh pr comment`, usando o `GITHUB_TOKEN` do job) com o marker `<!-- code-review-done -->` no início do corpo — mesmo padrão de evidência auditável usado em outros projetos do autor. Descartada a alternativa de commitar um arquivo de log (`docs/reviews/pr-{numero}.md`) de volta na branch: esse commit move o HEAD da PR para um SHA sem nenhum status check associado, e com `required_status_checks.strict: true` isso trava o merge indefinidamente (o PR nunca fica "verde" no commit mais recente) — falha de design descoberta empiricamente antes de ser revertida.
 
-**Modelo:** Sonnet 5 (`--model claude-sonnet-5`), não o padrão da action — Opus custava ~$0.50–0.70 por execução, desproporcional para revisar diffs de PR.
+**Modelo:** um modelo de custo intermediário, não o padrão da action — o modelo mais caro custava ~$0.50–0.70 por execução, desproporcional para revisar diffs de PR.
 
 **Bootstrap paradox conhecido:** a action recusa rodar em qualquer PR que altere o próprio `pr-review.yml` (proteção documentada contra workflow malicioso — exige o arquivo idêntico ao da branch padrão). PR desse tipo precisa de bypass administrativo pontual (`enforce_admins` desativado, merge, reativado imediatamente), documentado no corpo do merge commit.

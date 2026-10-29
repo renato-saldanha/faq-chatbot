@@ -125,23 +125,6 @@ alembic revision --autogenerate -m "descrição"
 alembic upgrade head
 ```
 
-## Regras de processo
-
-- **Nunca confiar no relatório de um subagent como prova de que o código existe/funciona.** Sempre confirmar com `ls`/`Read` o arquivo real e rodar o comando de teste/lint você mesmo antes de aceitar como concluído.
-- **Nunca dar `git add <diretório>` genérico esperando pegar só uma mudança.** Ele pega TODO o conteúdo pendente daquele diretório. Sempre `git status --short` antes de `git add`, e usar `git add <arquivo específico>` quando a intenção é isolar uma mudança.
-- **Código gerado por agente em paralelo entra como "não verificado" até `install`/`build`/`typecheck`/testes rodarem até o fim, sem erro, na sua própria execução.** Escrever o código não é o mesmo que validá-lo.
-- **`npm install`/`tsc`/`lint` limpos não substituem `docker compose up --build`.** `next build` roda pré-renderização estática (SSG) que `tsc --noEmit` não executa — um bug de rota (ex: colisão de rota entre `app/page.tsx` e um route group `(grupo)/page.tsx` mapeando pro mesmo path) só aparece no build de verdade. Rodar o smoke test via Docker antes de considerar o frontend pronto para entrega.
-- **Smoke test / teste manual de frontend sempre via Playwright em modo headless**, nunca a extensão Claude in Chrome (não confiável neste ambiente — já falhou por desconexão) nem screenshot manual pedindo pro usuário navegar. Instalar como dependência do projeto (`npm install -D @playwright/test && npx playwright install --with-deps chromium`) em vez de `npx playwright` avulso, e escrever o script de smoke test contra `http://localhost:3000` (stack já de pé via `docker compose up`) com `headless: true` explícito.
-- **PR novo = worktree nova.** Ao começar uma frente de trabalho distinta que vai virar seu próprio PR (nova feature, fix não relacionado ao que já está em andamento), criar uma worktree git nova (`git worktree add` ou `EnterWorktree`) em vez de continuar na mesma worktree/branch já em uso — nunca misturar mudanças de propósitos diferentes no mesmo diretório de trabalho. Não se aplica a commits sequenciais dentro da mesma unidade de trabalho, só a frentes novas e independentes.
-
-## Docker neste ambiente (Windows)
-
-- **Se `docker`/`docker compose` não forem reconhecidos no PATH da sessão atual do shell** (comum logo após instalar o Docker Desktop, ou quando ele foi instalado em local não padrão), localizar o binário com `Get-ChildItem -Recurse -Filter docker.exe` a partir da pasta de instalação real do Docker Desktop (neste ambiente: `C:\Users\renat\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe` — **não** o caminho padrão `C:\Program Files\Docker`). Adicionar essa pasta ao `$env:PATH` da sessão PowerShell antes de rodar `docker`/`docker compose`.
-- **Verificar se o Docker Desktop está de fato pronto** com `docker ps` antes de rodar `docker compose up` — processos `Docker Desktop`/`com.docker.backend` ativos no Task Manager não significam que o daemon já aceita comandos.
-- **Sempre garantir `.dockerignore` em qualquer diretório com `node_modules`/`.git` antes do primeiro `docker compose up --build`.** Sem ele, o build envia esse conteúdo inteiro como contexto (aqui chegou a ~350MB e travou a transferência por minutos) mesmo com Dockerfile multi-stage — o `COPY . .` do estágio de build reenvia tudo que está no contexto, independente do que foi copiado nos estágios anteriores.
-- **Se um build travar visivelmente sem progredir** (ex: `transferring context` crescendo devagar por mais de ~1 min), considerar `docker compose down` + corrigir a causa (geralmente `.dockerignore` ausente) + subir de novo, em vez de esperar — mais rápido sob prazo apertado do que deixar terminar.
-- **Rodar `docker compose up --build` em background (`run_in_background`)** e monitorar via `Monitor` com polling em `curl` nos health checks (`http://localhost:8000/health`, `http://localhost:3000`) — evita ficar bloqueado esperando o build inteiro para descobrir se algo quebrou.
-
 ## Decisões de escopo (ver histórico de commits)
 
 - **PRD §5 — 3 protótipos de similaridade (fuzzy/embedding/híbrido) implementados e avaliados**, selecionáveis via `SIMILARITY_BACKEND`. Gabarito (`scripts/similarity_eval_dataset.json` + `scripts/eval_similarity.py`, 21 casos) rodado contra os 3 backends reais (API OpenAI real, não mock): fuzzy 76.2%, **embedding 100% após calibração (vencedor pela regra do PRD — maior acurácia)**, hybrid 81.0%. Resultado bruto em `docs/similarity_eval_output.txt`, tabela e análise no README.

@@ -14,7 +14,7 @@ cd frontend && npm install && npx tsc --noEmit   # AINDA NÃO VALIDADO nesta ses
 
 **Frontend: código existe mas NÃO foi validado nem commitado.** Todas as telas (chat, login, dashboard, admin FAQ) foram escritas por um agente em paralelo, mas a instalação de dependências (`npm install`) travou por causa de um `node_modules` parcial/corrompido no disco — isso foi limpo (`rm -rf node_modules`), mas o `npm install` real e o `npx tsc --noEmit` **não rodaram até o fim** antes desta sessão terminar. **Isso é o primeiro passo a fazer na próxima sessão.**
 
-`CLAUDE.md` na raiz documenta a arquitetura completa (leia antes de mexer em qualquer arquivo — convenções, estrutura de pastas, comandos).
+`docs/ARQUITETURA.md` documenta a arquitetura completa (leia antes de mexer em qualquer arquivo — convenções, estrutura de pastas, comandos).
 
 ## O que fazer, em ordem
 
@@ -47,12 +47,12 @@ cd frontend && npm install && npx tsc --noEmit   # AINDA NÃO VALIDADO nesta ses
 
 - **`SIMILARITY_BACKEND=fuzzy` único** — protótipos B (embedding OpenAI) e C (híbrido) do PRD §5 não foram implementados, nem o script de avaliação comparativo. Schema já suporta embedding (`pgvector`), então é extensível depois.
 - **Sem testes de frontend** (Parte 9 do plano) — zero cobertura Vitest além de um teste placeholder (`utils.test.ts`).
-- **CI/CD desativado.** Foi construído (GitHub Actions com gate de review por IA via Claude Code Action), debugado extensivamente (~6h, 18 PRs — ver `docs/PRD.md` §11 para o histórico completo de causa raiz), e depois **abandonado** porque consumia tempo demais para o prazo. Branch protection foi removida (`gh api --method DELETE .../protection`), trabalho passou a ser commitado direto na `master`, sem PR. Os arquivos `.github/workflows/*.yml` continuam no repo como referência mas não são mais aplicados.
+- **CI/CD desativado.** Foi construído (GitHub Actions com gate de review automatizado por agente de IA), debugado extensivamente (~6h, 18 PRs — ver `docs/PRD.md` §11 para o histórico completo de causa raiz), e depois **abandonado** porque consumia tempo demais para o prazo. Branch protection foi removida (`gh api --method DELETE .../protection`), trabalho passou a ser commitado direto na `master`, sem PR. Os arquivos `.github/workflows/*.yml` continuam no repo como referência mas não são mais aplicados.
 - **Sem testes E2E** (Playwright/Cypress).
 
 ## Arquivos de referência, em ordem de leitura recomendada
 
-1. `CLAUDE.md` (raiz) — arquitetura, convenções, comandos. Leia primeiro.
+1. `docs/ARQUITETURA.md` — arquitetura, convenções, comandos. Leia primeiro.
 2. `docs/PRD.md` — requisitos completos, mapeados linha a linha do enunciado do desafio (C1-C5 chatbot, D1-D6 dashboard), decisões técnicas com justificativa.
 3. `docs/PLANO_IMPLEMENTACAO.md` — plano original em 12 Partes (0-11). Nem todas foram completadas — cruzar com "Decisões de corte de escopo" acima antes de assumir que uma Parte está pronta.
 4. Este arquivo (`docs/CONTEXTO_SESSAO.md`) — pode ser apagado depois que a entrega for feita, é só uma ponte entre sessões.
