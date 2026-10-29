@@ -23,6 +23,10 @@ class AuthOkResponse(BaseModel):
     authenticated: bool
 
 
+class OtpRequestResponse(AuthOkResponse):
+    codigo_demo: str | None = None
+
+
 def get_auth_service(
     otp_store: OtpStore = Depends(get_otp_store),
     settings: Settings = Depends(get_settings),
@@ -30,10 +34,10 @@ def get_auth_service(
     return AuthService(otp_store, settings)
 
 
-@router.post("/otp/request", response_model=AuthOkResponse)
-async def request_otp(body: OtpRequestBody, service: AuthService = Depends(get_auth_service)) -> AuthOkResponse:
-    await service.request_otp(body.email)
-    return AuthOkResponse(authenticated=False)
+@router.post("/otp/request", response_model=OtpRequestResponse, response_model_exclude_none=True)
+async def request_otp(body: OtpRequestBody, service: AuthService = Depends(get_auth_service)) -> OtpRequestResponse:
+    codigo_demo = await service.request_otp(body.email)
+    return OtpRequestResponse(authenticated=False, codigo_demo=codigo_demo)
 
 
 @router.post("/otp/verify", response_model=AuthOkResponse)
@@ -41,6 +45,7 @@ async def verify_otp(
     body: OtpVerifyBody,
     response: Response,
     service: AuthService = Depends(get_auth_service),
+    settings: Settings = Depends(get_settings),
 ) -> AuthOkResponse:
     token = service.verify_otp(body.email, body.codigo)
     if token is None:
@@ -50,7 +55,7 @@ async def verify_otp(
         key=_SESSION_COOKIE_NAME,
         value=token,
         httponly=True,
-        secure=True,
+        secure=settings.cookie_secure,
         samesite="strict",
         max_age=8 * 60 * 60,
     )

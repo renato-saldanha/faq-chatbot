@@ -1,7 +1,11 @@
+import hashlib
+import hmac
 import secrets
 import time
 
 from cachetools import TTLCache
+
+from app.config import get_settings
 
 _OTP_TTL_SECONDS = 5 * 60
 _RATE_LIMIT_TTL_SECONDS = 15 * 60
@@ -57,8 +61,48 @@ class OtpStore:
         return True
 
 
+class DemoOtpStore(OtpStore):
+    """OTP stateless para o modo demonstração (serverless, sem memória compartilhada entre invocações).
+
+    O código é derivado por HMAC(segredo, e-mail + janela de 5min) e aceito na janela atual e na anterior,
+    então qualquer instância valida um código gerado por outra. Sem estado, não há uso único nem limite de
+    tentativas — aceitável só porque, na demo, o código é devolvido na própria resposta do pedido.
+    """
+
+    def __init__(self, secret: str) -> None:
+        super().__init__()
+        self._secret = secret.encode()
+
+    def _code_for(self, email: str, window: int) -> str:
+        message = f"{email.strip().lower()}:{window}".encode()
+        digest = hmac.new(self._secret, message, hashlib.sha256).digest()
+        return f"{int.from_bytes(digest[:4], 'big') % 1_000_000:06d}"
+
+    def _current_window(self) -> int:
+        return int(time.time() // _OTP_TTL_SECONDS)
+
+    def can_request(self, email: str) -> bool:
+        return True
+
+    def record_request(self, email: str) -> None:
+        return None
+
+    def generate(self, email: str) -> str:
+        return self._code_for(email, self._current_window())
+
+    def can_verify(self, email: str) -> bool:
+        return True
+
+    def verify(self, email: str, code: str) -> bool:
+        window = self._current_window()
+        return any(secrets.compare_digest(self._code_for(email, w), code) for w in (window, window - 1))
+
+
 _otp_store = OtpStore()
 
 
 def get_otp_store() -> OtpStore:
+    settings = get_settings()
+    if settings.demo_mode:
+        return DemoOtpStore(settings.jwt_secret_key)
     return _otp_store

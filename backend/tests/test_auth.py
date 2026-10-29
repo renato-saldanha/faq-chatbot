@@ -9,6 +9,7 @@ from app.main import app
 def _override_auth_service() -> AsyncMock:
     service = AsyncMock()
     service.verify_otp = MagicMock()
+    service.request_otp.return_value = None
     app.dependency_overrides[get_auth_service] = lambda: service
     return service
 
@@ -22,6 +23,15 @@ class TestRequestOtp:
         assert response.status_code == 200
         assert response.json() == {"authenticated": False}
         service.request_otp.assert_awaited_once_with("admin@example.com")
+
+    def test_modo_demo_devolve_codigo_demo(self) -> None:
+        service = _override_auth_service()
+        service.request_otp.return_value = "123456"
+        client = TestClient(app)
+        response = client.post("/api/auth/otp/request", json={"email": "admin@demo.test"})
+
+        assert response.status_code == 200
+        assert response.json() == {"authenticated": False, "codigo_demo": "123456"}
 
 
 class TestVerifyOtp:

@@ -14,20 +14,24 @@ class AuthService:
         self._otp_store = otp_store
         self._settings = settings
 
-    async def request_otp(self, email: str) -> None:
+    async def request_otp(self, email: str) -> str | None:
         """Sempre "sucesso" do ponto de vista do chamador — anti-enumeração.
 
         Só gera/envia o OTP de fato quando o e-mail bate com ADMIN_EMAIL e o
         rate limit permite; resposta ao cliente é idêntica em qualquer caso.
+        No modo demonstração não há e-mail: o código é devolvido ao chamador.
         """
         if email.strip().lower() != self._settings.admin_email.strip().lower():
-            return
+            return None
         if not self._otp_store.can_request(email):
-            return
+            return None
 
         self._otp_store.record_request(email)
         code = self._otp_store.generate(email)
+        if self._settings.demo_mode:
+            return code
         self._send_email(email, code)
+        return None
 
     def verify_otp(self, email: str, code: str) -> str | None:
         if email.strip().lower() != self._settings.admin_email.strip().lower():
