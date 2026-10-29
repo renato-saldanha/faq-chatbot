@@ -8,14 +8,14 @@ Requisitos completos: `docs/PRD.md`. Plano de implementação original: `docs/PL
 
 - **Backend:** Python 3.11+, FastAPI, SQLAlchemy 2.0 (async, `asyncpg`), Alembic, Pydantic v2, `rapidfuzz` + `openai` (similaridade — 3 protótipos, ver decisão abaixo), `pgvector`, `python-jose` (JWT), `slowapi` (rate limit)
 - **Banco:** PostgreSQL 16 com extensão `pgvector`
-- **Frontend:** Next.js 14 (App Router), TypeScript, TanStack Query, Zustand, Recharts, Zod
+- **Frontend:** Next.js 16 (App Router), TypeScript, TanStack Query, Zustand, Recharts, Zod
 - **Auth do admin:** OTP por e-mail + JWT em cookie httpOnly — single-admin via `ADMIN_EMAIL`
 - **Conteinerização:** Docker (`docker-compose.yml` na raiz — postgres + backend + frontend)
 
 ## Arquitetura
 
 ```
-frontend (Next.js 14, :3000)
+frontend (Next.js 16, :3000)
     |
     |  HTTP + cookie httpOnly JWT  --->
     |  <---  JSON  ---

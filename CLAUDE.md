@@ -8,7 +8,7 @@ Requisitos completos: `docs/PRD.md`. Passo a passo de implementação: `docs/PLA
 
 - **Backend:** Python 3.11+, FastAPI, SQLAlchemy 2.0 (async, `asyncpg`), Alembic, Pydantic v2 (`pydantic-settings`), `rapidfuzz` (similaridade), `pgvector` (schema já preparado para embedding, backend ativo é fuzzy — ver PRD §5), `python-jose` (JWT), `cachetools` (OTP/rate-limit em memória)
 - **Banco:** PostgreSQL 16 com extensão `pgvector` (imagem `pgvector/pgvector:pg16`)
-- **Frontend:** Next.js 14 (App Router), TypeScript, TanStack Query, Zustand, Recharts, Zod, Vitest — CSS puro em `globals.css` (sem Tailwind/Shadcn neste projeto)
+- **Frontend:** Next.js 16 (App Router), TypeScript, TanStack Query, Zustand, Recharts, Zod, Vitest — CSS puro em `globals.css` (sem Tailwind/Shadcn neste projeto)
 - **Auth do admin:** OTP por e-mail (SMTP via stdlib `smtplib`) + JWT em cookie httpOnly — single-admin via `ADMIN_EMAIL`, sem tabela de usuários (decisão registrada em PRD §9)
 - **Conteinerização:** Docker (`docker-compose.yml` na raiz — postgres + backend + frontend)
 
