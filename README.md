@@ -102,6 +102,28 @@ Todas em `.env.example`:
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` | Envio do código OTP por e-mail; vazio = OTP cai no log do backend (ver acima) |
 | `JWT_SECRET_KEY` | Segredo de assinatura do JWT de sessão do admin — trocar em produção |
 
+## Demo na Vercel
+
+Demo pública em plano gratuito, com dois projetos Vercel e o Neon (Postgres + pgvector) como banco:
+
+- **Backend** (`backend/`, projeto `faq-chatbot-api`): FastAPI como função Python (entrypoint `app/main.py`). O `.vercelignore` exclui o `pyproject.toml` para que a Vercel instale as dependências do `requirements.txt`.
+- **Frontend** (`frontend/`, projeto `faq-chatbot`): Next.js com `rewrites` de `/api/*` para o backend, então navegador e API ficam na mesma origem e o cookie httpOnly do admin funciona sem CORS.
+- **Banco**: integração Neon (plano free) no projeto do backend. As migrations e o seed rodam a partir da máquina local contra o Neon (`alembic upgrade head` e `python -m scripts.seed_faq`, com `DATABASE_URL` apontando para a conexão sem pooler). A `DATABASE_URL` no formato do Neon (`postgres://...?sslmode=require`) é adaptada automaticamente para o asyncpg.
+
+| Projeto | Variável | Valor |
+|---|---|---|
+| backend | `DEMO_MODE` | `1` liga o modo demonstração (padrão desligado) |
+| backend | `ADMIN_EMAIL` | e-mail fictício da demo, ex.: `admin@demo.test` |
+| backend | `JWT_SECRET_KEY` | segredo aleatório (`openssl rand -hex 32`) |
+| backend | `SIMILARITY_BACKEND` | `fuzzy` (sem chave de IA) |
+| backend | `COOKIE_SECURE` | `true` (padrão); `false` só para HTTP local fora de localhost |
+| backend | `CORS_ORIGINS` | origens permitidas, separadas por vírgula (padrão `http://localhost:3000`; desnecessário com o proxy do front) |
+| backend | `DATABASE_URL` | injetada pela integração Neon |
+| frontend | `BACKEND_URL` | URL do backend, usada nos `rewrites` de `/api/*` |
+| frontend | `NEXT_PUBLIC_DEMO` | `1` exibe a faixa "Modo demonstração: dados fictícios" |
+
+**Como funciona o modo demonstração.** A Vercel não guarda estado em memória entre invocações, então o `OtpStore` em memória não serve e não há SMTP. Com `DEMO_MODE=1` o código OTP é derivado por HMAC-SHA256 de `JWT_SECRET_KEY`, e-mail e janela de 5 minutos (aceita a janela atual e a anterior), de modo que qualquer instância valida um código pedido em outra. A resposta de `POST /api/auth/otp/request` inclui `codigo_demo` e a tela de login exibe "Modo demonstração: seu código é ...". Limitações: o código não é de uso único e não há limite de tentativas de verificação (sem estado, e o código já é público na demo); o rate limit do chat (`slowapi`) continua em memória, por instância. Sem `DEMO_MODE`, local e Docker seguem exatamente como antes.
+
 ## Decisão: comparação dos três protótipos de similaridade
 
 O PRD original (`docs/PRD.md` §5) previa comparar três protótipos — léxico/fuzzy, semântico via embedding OpenAI, e um híbrido — com um gabarito de perguntas e métricas de acurácia/latência antes de escolher o backend definitivo. **Os três estão implementados**, selecionáveis via `SIMILARITY_BACKEND`:

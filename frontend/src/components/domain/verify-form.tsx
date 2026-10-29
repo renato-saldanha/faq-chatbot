@@ -9,9 +9,10 @@ import { useAuthStore } from "@/stores/auth-store";
 
 interface VerifyFormProps {
   email: string;
+  codigoDemo?: string | null;
 }
 
-export function VerifyForm({ email }: VerifyFormProps) {
+export function VerifyForm({ email, codigoDemo }: VerifyFormProps) {
   const [codigo, setCodigo] = useState("");
   const router = useRouter();
   const setAuthenticated = useAuthStore((s) => s.setAuthenticated);
@@ -35,6 +36,7 @@ export function VerifyForm({ email }: VerifyFormProps) {
         mutation.mutate();
       }}
     >
+      {codigoDemo && <p className="demo-code">Modo demonstração: seu código é {codigoDemo}</p>}
       <label htmlFor="codigo">Código de 6 dígitos</label>
       <input
         id="codigo"

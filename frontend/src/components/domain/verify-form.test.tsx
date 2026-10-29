@@ -28,6 +28,15 @@ describe("VerifyForm", () => {
     expect(screen.getByRole("button", { name: "Verificar" })).toBeInTheDocument();
   });
 
+  it("exibe o código de demonstração apenas quando informado", () => {
+    const { unmount } = renderWithClient(<VerifyForm email="usuario@example.com" />);
+    expect(screen.queryByText(/Modo demonstração/)).not.toBeInTheDocument();
+    unmount();
+
+    renderWithClient(<VerifyForm email="usuario@example.com" codigoDemo="654321" />);
+    expect(screen.getByText("Modo demonstração: seu código é 654321")).toBeInTheDocument();
+  });
+
   it("preenche código e submete chamando api.post com email e codigo corretos", async () => {
     vi.mocked(api.post).mockResolvedValueOnce({ authenticated: false });
     const user = userEvent.setup();

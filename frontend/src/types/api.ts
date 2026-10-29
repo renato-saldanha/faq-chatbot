@@ -25,6 +25,11 @@ export interface ChatAskResponse {
   score: number | null;
 }
 
+export interface OtpRequestResponse {
+  authenticated: boolean;
+  codigo_demo?: string;
+}
+
 export interface MetricsSummary {
   total_conversas: number;
   total_sem_resposta: number;

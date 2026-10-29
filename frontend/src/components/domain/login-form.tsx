@@ -4,15 +4,18 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import type { OtpRequestResponse } from "@/types/api";
 import { VerifyForm } from "@/components/domain/verify-form";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
   const [step, setStep] = useState<"email" | "otp">("email");
+  const [codigoDemo, setCodigoDemo] = useState<string | null>(null);
 
   const mutation = useMutation({
-    mutationFn: () => api.post("/api/auth/otp/request", { email }),
-    onSuccess: () => {
+    mutationFn: () => api.post<OtpRequestResponse | undefined>("/api/auth/otp/request", { email }),
+    onSuccess: (data) => {
+      setCodigoDemo(data?.codigo_demo ?? null);
       setStep("otp");
       toast.success("Se o e-mail estiver correto, um código foi enviado.");
     },
@@ -20,7 +23,7 @@ export function LoginForm() {
   });
 
   if (step === "otp") {
-    return <VerifyForm email={email} />;
+    return <VerifyForm email={email} codigoDemo={codigoDemo} />;
   }
 
   return (

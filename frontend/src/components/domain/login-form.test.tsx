@@ -51,6 +51,17 @@ describe("LoginForm", () => {
     expect(screen.getByRole("button", { name: "Verificar" })).toBeInTheDocument();
   });
 
+  it("no modo demonstração, exibe o código devolvido pela API", async () => {
+    vi.mocked(api.post).mockResolvedValueOnce({ authenticated: false, codigo_demo: "123456" });
+    const user = userEvent.setup();
+    renderWithClient(<LoginForm />);
+
+    await user.type(screen.getByLabelText("E-mail"), "admin@demo.test");
+    await user.click(screen.getByRole("button", { name: "Enviar código" }));
+
+    expect(await screen.findByText("Modo demonstração: seu código é 123456")).toBeInTheDocument();
+  });
+
   it("em caso de erro, chama toast.error e mantém o formulário de e-mail visível", async () => {
     vi.mocked(api.post).mockRejectedValueOnce(new Error("Erro 500: falha"));
     const user = userEvent.setup();
