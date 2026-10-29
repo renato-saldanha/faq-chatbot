@@ -1,14 +1,20 @@
-import { LoginForm } from "@/components/domain/login-form";
-
-const DEMO_EMAIL = "admin@demo.test";
+import { DEMO_EMAIL, LoginForm } from "@/components/domain/login-form";
 
 export default function LoginPage() {
+  const demo = process.env.NEXT_PUBLIC_DEMO === "1";
+
   return (
     <main className="page-container auth-page">
       <h1>Painel Admin</h1>
-      <p className="page-subtitle">Entre com seu e-mail para receber um código de acesso.</p>
-      {process.env.NEXT_PUBLIC_DEMO === "1" && (
-        <p className="demo-code">Modo demonstração: use o e-mail {DEMO_EMAIL}</p>
+      <p className="page-subtitle">
+        {demo
+          ? "Entre com o e-mail de demonstração e clique em Enviar código."
+          : "Entre com seu e-mail para receber um código de acesso."}
+      </p>
+      {demo && (
+        <p className="demo-code">
+          Modo demonstração: nenhum e-mail é enviado. Use {DEMO_EMAIL}; o código aparece na tela seguinte.
+        </p>
       )}
       <LoginForm />
     </main>

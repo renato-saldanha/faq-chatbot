@@ -37,6 +37,12 @@ describe("VerifyForm", () => {
     expect(screen.getByText("Modo demonstração: seu código é 654321")).toBeInTheDocument();
   });
 
+  it("no modo demonstração, já preenche o campo com o código informado", () => {
+    renderWithClient(<VerifyForm email="usuario@example.com" codigoDemo="654321" />);
+
+    expect(screen.getByLabelText("Código de 6 dígitos")).toHaveValue("654321");
+  });
+
   it("preenche código e submete chamando api.post com email e codigo corretos", async () => {
     vi.mocked(api.post).mockResolvedValueOnce({ authenticated: false });
     const user = userEvent.setup();

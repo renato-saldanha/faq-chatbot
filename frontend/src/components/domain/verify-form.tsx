@@ -13,7 +13,7 @@ interface VerifyFormProps {
 }
 
 export function VerifyForm({ email, codigoDemo }: VerifyFormProps) {
-  const [codigo, setCodigo] = useState("");
+  const [codigo, setCodigo] = useState(codigoDemo ?? "");
   const router = useRouter();
   const setAuthenticated = useAuthStore((s) => s.setAuthenticated);
 
