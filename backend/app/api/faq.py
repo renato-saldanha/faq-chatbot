@@ -53,7 +53,7 @@ async def list_faq(repo: FaqRepository = Depends(get_faq_repository)) -> list[Fa
 
 @router.post("", response_model=FaqItemOut)
 async def create_faq(body: FaqItemIn, repo: FaqRepository = Depends(get_faq_repository)) -> FaqItemOut:
-    item = await repo.create(body.categoria_id, body.pergunta, body.resposta)
+    item = await repo.create(body.categoria_id, body.pergunta, body.resposta, body.ativo)
     return _to_out(item)
 
 

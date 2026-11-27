@@ -69,7 +69,20 @@ class TestCreateFaq:
 
         assert response.status_code == 200
         assert response.json()["id"] == 1
-        repo.create.assert_awaited_once_with(2, "Como cadastro?", "Acesse o site.")
+        repo.create.assert_awaited_once_with(2, "Como cadastro?", "Acesse o site.", True)
+
+    def test_repassa_ativo_false(self) -> None:
+        """Regressão: o checkbox "Ativo" do formulário era ignorado e toda pergunta nova nascia ativa."""
+        repo = _override_repo()
+        repo.create.return_value = _make_faq_item(1, 2, "Como cadastro?", "Acesse o site.", False, "Conta")
+        client = TestClient(app)
+        response = client.post(
+            "/api/faq",
+            json={"categoria_id": 2, "pergunta": "Como cadastro?", "resposta": "Acesse o site.", "ativo": False},
+        )
+
+        assert response.status_code == 200
+        repo.create.assert_awaited_once_with(2, "Como cadastro?", "Acesse o site.", False)
 
     def test_payload_invalido_retorna_422(self) -> None:
         _override_repo()
