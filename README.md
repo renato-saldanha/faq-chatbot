@@ -174,7 +174,7 @@ backend/
 ├── alembic/                     # Migrations (extensão pgvector + 3 tabelas)
 ├── scripts/seed_faq.py           # Seed idempotente, rodado automaticamente no boot
 ├── scripts/eval_similarity.py    # Gabarito de similaridade — ver "Decisão" acima
-├── tests/                        # 76 testes (services/repositories + rotas HTTP), sem depender de Postgres real
+├── tests/                        # 96 testes (services/repositories + rotas HTTP), sem depender de Postgres real
 └── Dockerfile
 
 frontend/
@@ -217,14 +217,14 @@ Detalhes de arquitetura e convenções de código: `docs/ARQUITETURA.md`.
 ```bash
 # Backend
 cd backend
-pytest tests/ -v          # 76 passed
+pytest tests/ -v          # 96 passed
 ruff check . && mypy app/  # ambos limpos
 
 # Frontend
 cd frontend
 npx tsc --noEmit
 npm run lint
-npm run test          # 33 passed
+npm run test          # 38 passed
 
 # E2E (Playwright, requer a stack de pé via docker compose up --build)
 cd frontend
@@ -286,4 +286,4 @@ Suíte Playwright (`frontend/e2e/`, PR #24) rodando contra a stack Docker real, 
 
 ## CI/CD
 
-`.github/workflows/ci.yml` (GitHub Actions), três jobs em todo push/PR na `master`: `backend` (lint, typecheck, 76 testes), `frontend` (lint, typecheck, 33 testes, build do Next.js) e `e2e` (sobe `docker compose` real e roda a suíte Playwright acima). Sem branch protection configurada, então nada bloqueia merge automaticamente hoje — os gates rodam e reportam, mas o merge continua manual.
+`.github/workflows/ci.yml` (GitHub Actions), três jobs em todo push/PR na `master`: `backend` (lint, typecheck, 96 testes), `frontend` (lint, typecheck, 38 testes, build do Next.js) e `e2e` (sobe `docker compose` real e roda a suíte Playwright acima). Sem branch protection configurada, então nada bloqueia merge automaticamente hoje — os gates rodam e reportam, mas o merge continua manual.

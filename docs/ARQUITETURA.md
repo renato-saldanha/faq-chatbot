@@ -6,7 +6,7 @@ Requisitos completos: `docs/PRD.md`. Passo a passo de implementação: `docs/PLA
 
 ## Stack
 
-- **Backend:** Python 3.11+, FastAPI, SQLAlchemy 2.0 (async, `asyncpg`), Alembic, Pydantic v2 (`pydantic-settings`), `rapidfuzz` (similaridade), `pgvector` (schema já preparado para embedding, backend ativo é fuzzy — ver PRD §5), `python-jose` (JWT), `cachetools` (OTP/rate-limit em memória)
+- **Backend:** Python 3.11+, FastAPI, SQLAlchemy 2.0 (async, `asyncpg`), Alembic, Pydantic v2 (`pydantic-settings`), `rapidfuzz` + `openai` (similaridade: backends `fuzzy`, `embedding` e `hybrid`, escolhidos por `SIMILARITY_BACKEND` — ver PRD §5), `pgvector` (busca por cosseno do backend `embedding`), `python-jose` (JWT), `cachetools` (OTP/rate-limit em memória)
 - **Banco:** PostgreSQL 16 com extensão `pgvector` (imagem `pgvector/pgvector:pg16`)
 - **Frontend:** Next.js 16 (App Router), TypeScript, TanStack Query, Zustand, Recharts, Zod, Vitest — CSS puro em `globals.css` (sem Tailwind/Shadcn neste projeto)
 - **Auth do admin:** OTP por e-mail (SMTP via stdlib `smtplib`) + JWT em cookie httpOnly — single-admin via `ADMIN_EMAIL`, sem tabela de usuários (decisão registrada em PRD §9)
@@ -129,7 +129,7 @@ alembic upgrade head
 
 - **PRD §5 — 3 protótipos de similaridade (fuzzy/embedding/híbrido) implementados e avaliados**, selecionáveis via `SIMILARITY_BACKEND`. Gabarito (`scripts/similarity_eval_dataset.json` + `scripts/eval_similarity.py`, 21 casos) rodado contra os 3 backends reais (API OpenAI real, não mock): fuzzy 76.2%, **embedding 100% após calibração (vencedor pela regra do PRD — maior acurácia)**, hybrid 81.0%. Resultado bruto em `docs/similarity_eval_output.txt`, tabela e análise no README.
 - **CI/CD ativo** (`.github/workflows/ci.yml`) — lint/typecheck/test de backend e frontend + build do Docker Compose + suíte E2E (job `e2e`, ver abaixo), em todo push/PR. Sem branch protection configurada, então o merge continua manual mesmo com gates rodando.
-- **Testes E2E automatizados em CI** (Playwright, PR #24) — cobertura unitária (backend, 76 testes) e de componente (frontend, 33 testes via Vitest) mais 9 testes ponta a ponta em `frontend/e2e/` contra a stack Docker real (chat público, login OTP, CRUD de FAQ, métricas), rodando no job `e2e` a cada push/PR. Detalhe de implementação (storageState compartilhado, leitura de OTP do log, isolamento do teste de rate limit) na seção "Testes E2E" acima.
+- **Testes E2E automatizados em CI** (Playwright, PR #24) — cobertura unitária (backend, 96 testes) e de componente (frontend, 38 testes via Vitest) mais 9 testes ponta a ponta em `frontend/e2e/` contra a stack Docker real (chat público, login OTP, CRUD de FAQ, métricas), rodando no job `e2e` a cada push/PR. Detalhe de implementação (storageState compartilhado, leitura de OTP do log, isolamento do teste de rate limit) na seção "Testes E2E" acima.
 
 ## Decisões de design — implementação dos 3 protótipos de similaridade (PRD §5)
 
