@@ -5,6 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Categoria, FaqItem, Interacao
+from app.repositories._date_filter import apply_date_range
 
 
 @dataclass(frozen=True)
@@ -24,13 +25,6 @@ class FaqMetricsRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    def _apply_date_filter(self, query, date_from: date | None, date_to: date | None):
-        if date_from is not None:
-            query = query.where(Interacao.criado_em >= date_from)
-        if date_to is not None:
-            query = query.where(Interacao.criado_em <= date_to)
-        return query
-
     async def get_top_questions(
         self, date_from: date | None, date_to: date | None, limit: int = 10
     ) -> list[TopQuestion]:
@@ -43,7 +37,7 @@ class FaqMetricsRepository:
             .order_by(quantidade.desc())
             .limit(limit)
         )
-        query = self._apply_date_filter(query, date_from, date_to)
+        query = apply_date_range(query, date_from, date_to)
         result = await self._session.execute(query)
         return [TopQuestion(faq_item_id=row[0], pergunta=row[1], quantidade=row[2]) for row in result.all()]
 
@@ -56,6 +50,6 @@ class FaqMetricsRepository:
             .group_by(Categoria.nome)
             .order_by(quantidade.desc())
         )
-        query = self._apply_date_filter(query, date_from, date_to)
+        query = apply_date_range(query, date_from, date_to)
         result = await self._session.execute(query)
         return [CategoryBreakdown(categoria=row[0], quantidade=row[1]) for row in result.all()]
