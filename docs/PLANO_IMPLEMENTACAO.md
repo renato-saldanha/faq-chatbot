@@ -25,7 +25,6 @@ Referência: `PRD.md`. Cada parte é entregável e testável isoladamente antes 
 - **Protótipo B (embedding)**: chamada à API OpenAI (`text-embedding-3-small`), cache de embeddings dos `FaqItem` (calculados no seed/CRUD, coluna `embedding`), comparação por cosseno. `vector_for` retorna o embedding real.
 - **Protótipo C (híbrido)**: combina os scores de A e B (`score_final = α·score_embedding + (1-α)·score_trigram`), com `α` calibrado no mesmo script de avaliação.
 - Normalização de texto (lowercase, remoção de acentuação/pontuação) antes de vetorizar, com cache de embedding por hash do texto normalizado.
-- Limiar adaptativo: aceitar o melhor candidato por margem relativa ao segundo colocado, além do `SIMILARITY_THRESHOLD` absoluto.
 - Gabarito fixo (`scripts/similarity_eval_dataset.json`): ~20 perguntas com `faq_item_id` esperado (`null` para as que devem cair em sem-resposta) — ~10 casos fáceis, ~5 paráfrases, ~5 com typos (composição detalhada no PRD §5).
 - Script de avaliação (`scripts/eval_similarity.py`): roda o gabarito contra os três protótipos, calcula acurácia (% de match correto) e latência média por consulta, imprime tabela comparativa.
 - Regra de decisão objetiva: vence maior acurácia; empate → menor latência. Sem julgamento subjetivo no momento de decidir.

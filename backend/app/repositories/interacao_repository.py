@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Interacao
+from app.repositories._date_filter import apply_date_range
 
 
 class InteracaoRepository:
@@ -37,10 +38,7 @@ class InteracaoRepository:
         limit: int = 50,
     ) -> list[Interacao]:
         query = select(Interacao).where(Interacao.sem_resposta.is_(True))
-        if date_from is not None:
-            query = query.where(Interacao.criado_em >= date_from)
-        if date_to is not None:
-            query = query.where(Interacao.criado_em <= date_to)
+        query = apply_date_range(query, date_from, date_to)
         query = query.order_by(Interacao.criado_em.desc()).limit(limit)
         result = await self._session.execute(query)
         return list(result.scalars().all())

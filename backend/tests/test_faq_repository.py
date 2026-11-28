@@ -57,6 +57,48 @@ async def test_create_adiciona_e_commita():
 
 
 @pytest.mark.asyncio
+async def test_create_respeita_ativo_false():
+    session = AsyncMock()
+    session.add = MagicMock()
+    repo = FaqRepository(session)
+
+    item = await repo.create(categoria_id=1, pergunta="p", resposta="r", ativo=False)
+
+    assert item.ativo is False
+
+
+def _session_com_item(item: FaqItem) -> AsyncMock:
+    session = AsyncMock()
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = item
+    session.execute.return_value = result
+    return session
+
+
+@pytest.mark.asyncio
+async def test_update_com_pergunta_nova_zera_embedding():
+    """Regressão: editar o texto mantinha o vetor do texto antigo e o chat seguia casando com ele."""
+    item = FaqItem(id=1, categoria_id=1, pergunta="antiga", resposta="r", ativo=True, embedding=[0.1, 0.2])
+    repo = FaqRepository(_session_com_item(item))
+
+    await repo.update(1, categoria_id=1, pergunta="nova", resposta="r", ativo=True)
+
+    assert item.pergunta == "nova"
+    assert item.embedding is None
+
+
+@pytest.mark.asyncio
+async def test_update_sem_mudar_pergunta_mantem_embedding():
+    item = FaqItem(id=1, categoria_id=1, pergunta="igual", resposta="r", ativo=True, embedding=[0.1, 0.2])
+    repo = FaqRepository(_session_com_item(item))
+
+    await repo.update(1, categoria_id=2, pergunta="igual", resposta="outra resposta", ativo=False)
+
+    assert item.embedding == [0.1, 0.2]
+    assert item.resposta == "outra resposta"
+
+
+@pytest.mark.asyncio
 async def test_delete_item_inexistente_retorna_false():
     session = AsyncMock()
     result = MagicMock()

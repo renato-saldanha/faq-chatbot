@@ -21,8 +21,8 @@ class FaqRepository:
         result = await self._session.execute(query)
         return result.scalar_one_or_none()
 
-    async def create(self, categoria_id: int, pergunta: str, resposta: str) -> FaqItem:
-        item = FaqItem(categoria_id=categoria_id, pergunta=pergunta, resposta=resposta, ativo=True)
+    async def create(self, categoria_id: int, pergunta: str, resposta: str, ativo: bool = True) -> FaqItem:
+        item = FaqItem(categoria_id=categoria_id, pergunta=pergunta, resposta=resposta, ativo=ativo)
         self._session.add(item)
         await self._session.commit()
         await self._session.refresh(item, attribute_names=["categoria"])
@@ -34,6 +34,10 @@ class FaqRepository:
         item = await self.get_by_id(faq_item_id)
         if item is None:
             return None
+        if item.pergunta != pergunta:
+            # O embedding é o vetor do texto antigo; zerar faz o backend embedding/hybrid recalcular
+            # na próxima consulta (ensure_embeddings só preenche itens com embedding None).
+            item.embedding = None
         item.categoria_id = categoria_id
         item.pergunta = pergunta
         item.resposta = resposta

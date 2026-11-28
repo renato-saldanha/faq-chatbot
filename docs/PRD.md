@@ -162,6 +162,8 @@ Fora de escopo desta decisão: múltiplos admins, recuperação de conta, "lembr
 
 ## 11. Gate de review automatizado (CI) — mecanismo e evidência de execução
 
+> **Histórico.** Este gate foi removido do projeto (ver `docs/CHECKLIST.md`, item CI/CD). Hoje o CI é só o `.github/workflows/ci.yml`: backend, frontend e e2e, sem branch protection. A seção fica como registro da decisão.
+
 O workflow `pr-review.yml` roda um agente de revisão contra cada PR e bloqueia o merge se houver achado de severidade Showstopper (branch protection exige o check `automated review` verde, `enforce_admins: true` sem exceção).
 
 **Formato de saída do agente:** texto simples terminando em uma linha literal `VEREDICTO: SHIP_CLEAN|SHIP|FIX_AND_RESUBMIT`, com linhas `SHOWSTOPPER: ...`/`CONCERN: ...` para achados — não JSON estruturado. A flag `--json-schema` da action de revisão foi tentada e descartada: em testes reais, a action não propagava o schema para o SDK (`is_error: true` instantâneo, sem chamada de modelo), então o parsing é feito por regex sobre o texto de resposta, extraído do `execution_file` (output documentado da action) via `jq`.

@@ -5,6 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Interacao
+from app.repositories._date_filter import apply_date_range
 
 
 @dataclass(frozen=True)
@@ -24,19 +25,12 @@ class TimeseriesMetricsRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    def _apply_date_filter(self, query, date_from: date | None, date_to: date | None):
-        if date_from is not None:
-            query = query.where(Interacao.criado_em >= date_from)
-        if date_to is not None:
-            query = query.where(Interacao.criado_em <= date_to)
-        return query
-
     async def get_summary(self, date_from: date | None, date_to: date | None) -> MetricsSummary:
         query = select(
             func.count(Interacao.id),
             func.count(Interacao.id).filter(Interacao.sem_resposta.is_(True)),
         )
-        query = self._apply_date_filter(query, date_from, date_to)
+        query = apply_date_range(query, date_from, date_to)
         result = await self._session.execute(query)
         total, total_sem_resposta = result.one()
 
@@ -50,6 +44,6 @@ class TimeseriesMetricsRepository:
     async def get_daily_series(self, date_from: date | None, date_to: date | None) -> list[DailyCount]:
         dia = func.date(Interacao.criado_em).label("dia")
         query = select(dia, func.count(Interacao.id)).group_by(dia).order_by(dia)
-        query = self._apply_date_filter(query, date_from, date_to)
+        query = apply_date_range(query, date_from, date_to)
         result = await self._session.execute(query)
         return [DailyCount(data=str(row[0]), quantidade=row[1]) for row in result.all()]
