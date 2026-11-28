@@ -157,7 +157,7 @@ Todas estão em [.env.example](.env.example).
 |---|---|
 | `DATABASE_URL` | Conexão assíncrona com o Postgres (já aponta para o serviço do Compose) |
 | `SIMILARITY_BACKEND` | `fuzzy`, `embedding` ou `hybrid` |
-| `SIMILARITY_THRESHOLD` | Score mínimo (0 a 1) para aceitar uma correspondência. Padrão `0.55`, calibrado no gabarito |
+| `SIMILARITY_THRESHOLD` | Score mínimo (0 a 1) para aceitar uma correspondência. Padrão `0.55`, calibrado para o `embedding`. Com `fuzzy`, use `0.65` |
 | `OPENAI_API_KEY` / `OPENAI_MODEL` | Necessárias para `embedding` e `hybrid`. Modelo: `text-embedding-3-small` |
 | `ADMIN_EMAIL` | Único e-mail autorizado a entrar no painel |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` | Envio do código OTP. Vazio, o código vai para o log |
@@ -183,6 +183,7 @@ A demo roda no plano gratuito, com dois projetos na Vercel e o Neon como banco (
 | backend | `ADMIN_EMAIL` | e-mail fictício, ex.: `admin@demo.test` |
 | backend | `JWT_SECRET_KEY` | segredo aleatório (`openssl rand -hex 32`) |
 | backend | `SIMILARITY_BACKEND` | `fuzzy` |
+| backend | `SIMILARITY_THRESHOLD` | `0.65` (o padrão `0.55` deixa perguntas fora da base receberem resposta errada com `fuzzy`) |
 | backend | `DATABASE_URL` | injetada pela integração Neon |
 | frontend | `BACKEND_URL` | URL do backend, usada nos `rewrites` |
 | frontend | `NEXT_PUBLIC_DEMO` | `1` exibe a faixa "Modo demonstração: dados fictícios" |
