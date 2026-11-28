@@ -10,7 +10,7 @@ Chatbot que responde perguntas frequentes encontrando, na base de conhecimento, 
 
 ### [▶ Abrir a demo](https://faq-chatbot-psi.vercel.app)
 
-Não precisa de cadastro. Experimente perguntar "Como recupero minha senha?" ou "Vocês aceitam boleto?". Para ver o painel, clique em **Painel interno**: no modo demonstração o e-mail e o código de acesso já vêm preenchidos. Os dados da demo são fictícios.
+Não precisa de cadastro. Experimente perguntar "Quais formas de pagamento vocês aceitam?", testar um erro de digitação como "Como cancelo minha asinatura?" ou fazer uma pergunta fora da base, como "Vocês vendem carros usados?". Para ver o painel, clique em **Painel interno**: no modo demonstração o e-mail e o código de acesso já vêm preenchidos. Os dados da demo são fictícios.
 
 ---
 
